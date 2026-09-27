@@ -17,7 +17,11 @@ const p2pModule = require('./src/p2p');
 const {
   initP2PServer,
   connectToPeers,
+  connectToPeer,
+  disconnectPeer,
   broadcastLatest,
+  broadcastTransaction,
+  getPeers,
   getSockets,
 } = p2pModule;
 
@@ -53,7 +57,7 @@ const INITIAL_PEERS = rawPeers
   .filter(Boolean);
 
 // Mỗi node có bản sao Blockchain riêng biệt lưu trên RAM
-const blockchain = new Blockchain();
+const blockchain = new Blockchain({ difficulty: Number(process.env.DIFFICULTY) || 2 });
 
 // Nhật ký hoạt động (in-memory ring buffer)
 const logs = [];
@@ -61,6 +65,9 @@ function log(message) {
   const entry = { time: new Date().toISOString(), message };
   logs.push(entry);
   if (logs.length > 200) logs.shift();
+  if (typeof p2pModule.broadcast === 'function') {
+    p2pModule.broadcast({ type: p2pModule.MessageType.EVENT, event: 'log', data: entry });
+  }
   // eslint-disable-next-line no-console
   console.log(`[${NODE_ID}] ${message}`);
 }
@@ -68,7 +75,14 @@ function log(message) {
 // ------------------------------- REST API -------------------------------
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '128kb' }));
+
+app.get('/', (req, res) => res.json({
+  name: 'Blockchain Simulator Node',
+  nodeId: NODE_ID,
+  educationalOnly: true,
+  endpoints: ['/status', '/blocks', '/mempool', '/logs', '/peers'],
+}));
 
 /** GET /status - Kiểm tra trạng thái node */
 app.get('/status', (req, res) => {
@@ -82,7 +96,10 @@ app.get('/status', (req, res) => {
     height: latest ? (latest.index !== undefined ? latest.index : latest.height) : 0,
     latestHash: latest ? latest.hash : '',
     peers: peersList.length,
+    peerList: typeof getPeers === 'function' ? getPeers() : [],
     mempoolSize: blockchain.mempool ? blockchain.mempool.length : 0,
+    difficulty: blockchain.difficulty,
+    educationalOnly: true,
   });
 });
 
@@ -96,48 +113,77 @@ app.get('/logs', (req, res) => {
   res.json(logs.slice(-50));
 });
 
+app.get('/mempool', (req, res) => res.json(blockchain.mempool));
+
+app.get('/peers', (req, res) => res.json(getPeers()));
+
+app.post('/peers', (req, res) => {
+  const url = req.body?.url;
+  if (typeof url !== 'string' || !/^wss?:\/\/[^ ]+$/i.test(url)) {
+    return res.status(400).json({ error: 'Cần URL peer ws:// hoặc wss:// hợp lệ.' });
+  }
+  const connected = connectToPeer(url);
+  if (!connected) return res.status(409).json({ error: 'Peer đã kết nối hoặc không thể bắt đầu kết nối.' });
+  log(`Đang kết nối peer ${url}`);
+  return res.status(202).json({ status: 'connecting', url });
+});
+
+app.delete('/peers', (req, res) => {
+  const url = req.body?.url || req.query.url;
+  if (typeof url !== 'string' || !disconnectPeer(url)) {
+    return res.status(404).json({ error: 'Không tìm thấy kết nối peer.' });
+  }
+  return res.json({ status: 'disconnecting', url });
+});
+
+app.post('/faucet', (req, res) => {
+  try {
+    const balance = blockchain.fundDemoAddress(req.body?.address, Number(req.body?.amount) || 100);
+    log(`Faucet mô phỏng cấp coin cho ${req.body.address.slice(0, 10)}…`);
+    return res.json({ address: req.body.address, balance });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+});
+
 /** POST /mine - Tạo/đào block mới */
 app.post('/mine', (req, res) => {
-  let newBlock = null;
-  const customData = req.body && req.body.data ? [{ info: req.body.data }] : null;
-
-  if (typeof blockchain.mineNewBlock === 'function') {
-    newBlock = blockchain.mineNewBlock(customData);
-  } else if (typeof blockchain.addBlock === 'function') {
-    const prev = blockchain.getLatestBlock();
-    const idx = (prev ? prev.index : 0) + 1;
-    newBlock = {
-      index: idx,
-      previousHash: prev ? prev.hash : '0',
-      timestamp: Date.now(),
-      data: customData || [{ from: 'SYSTEM', to: NODE_ID, amount: 50 }],
-      nonce: 0,
-      hash: 'mock-hash-' + Date.now(),
-    };
-    blockchain.addBlock(newBlock);
-  }
-
-  if (!newBlock) {
-    return res.status(400).json({ error: 'Không thể đào block mới' });
-  }
-
-  log(`⛏️ Đã tạo/đào thành công Block #${newBlock.index}`);
-  if (typeof broadcastLatest === 'function') {
+  try {
+    if (req.body && Object.hasOwn(req.body, 'difficulty')) {
+      const requested = Number(req.body.difficulty);
+      if (!Number.isInteger(requested) || requested < 1 || requested > 5) {
+        return res.status(400).json({ error: 'Độ khó phải là số nguyên từ 1 đến 5.' });
+      }
+    }
+    const requestedDifficulty = Number(req.body?.difficulty);
+    if (Number.isInteger(requestedDifficulty) && requestedDifficulty >= 1 && requestedDifficulty <= 5) {
+      blockchain.difficulty = requestedDifficulty;
+    }
+    const customData = req.body?.data ? [{ info: String(req.body.data).slice(0, 500) }] : null;
+    const newBlock = blockchain.mineNewBlock(customData);
+    if (!newBlock) {
+      return res.status(400).json({ error: 'Không thể đào block mới.' });
+    }
+    log(`Đào xong Block #${newBlock.index} trong ${newBlock.timeTakenMs} ms (${newBlock.attempts} lần thử)`);
     broadcastLatest(blockchain);
+    return res.json(newBlock);
+  } catch (error) {
+    log(`Lỗi đào block: ${error.message}`);
+    return res.status(400).json({ error: error.message });
   }
-  return res.json(newBlock);
 });
 
 /** POST /transaction - Thêm giao dịch vào mempool */
 app.post('/transaction', (req, res) => {
-  if (typeof blockchain.addToMempool === 'function') {
-    blockchain.addToMempool({ ...req.body, receivedAt: Date.now() });
-  } else if (Array.isArray(blockchain.mempool)) {
-    blockchain.mempool.push({ ...req.body, receivedAt: Date.now() });
+  try {
+    const tx = blockchain.addToMempool(req.body);
+    log(`Giao dịch ${tx.id.slice(0, 12)} đã vào mempool (${blockchain.mempool.length})`);
+    broadcastTransaction(tx);
+    p2pModule.broadcast({ type: p2pModule.MessageType.EVENT, event: 'mempool', data: blockchain.mempool.length });
+    return res.status(201).json({ transaction: tx, mempoolSize: blockchain.mempool.length });
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
   }
-  const size = blockchain.mempool ? blockchain.mempool.length : 0;
-  log(`📝 Giao dịch mới được thêm vào Mempool (size: ${size})`);
-  res.json({ mempoolSize: size });
 });
 
 // Khởi chạy HTTP REST API
@@ -160,3 +206,9 @@ if (INITIAL_PEERS.length > 0 && typeof connectToPeers === 'function') {
   log(`🔗 Đang kết nối tới peers: ${INITIAL_PEERS.join(', ')}`);
   connectToPeers(INITIAL_PEERS, blockchain, NODE_ID, HTTP_PORT, WS_PORT, log);
 }
+
+app.use((err, req, res, next) => {
+  if (res.headersSent) return next(err);
+  log(`HTTP error: ${err.message}`);
+  return res.status(400).json({ error: 'Yêu cầu JSON không hợp lệ.' });
+});
