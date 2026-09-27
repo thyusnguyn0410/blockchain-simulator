@@ -247,7 +247,7 @@ function hasValidLedger(chain) {
       }
 
       // Xử lý chuyển tiền thông thường
-      if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from \vert{}\vert{} '') \vert{}\vert{} !/^[0-9a-f]{40}$/i.test(tx.to || '')) return false;
+      if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from || '') || !/^[0-9a-f]{40}$/i.test(tx.to || '')) return false;
       if (!Number.isFinite(tx.amount) || tx.amount <= 0 || !Number.isSafeInteger(tx.nonce) || tx.nonce < 0) return false;
       if (getAddress(tx.publicKey || '') !== tx.from || !verifyTransactionSignature(tx)) return false;
       
@@ -387,7 +387,7 @@ class Blockchain {
    * Kiểm tra tính hợp lệ của một giao dịch trước khi đưa vào Mempool
    */
   validateTransaction(tx) {
-    if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from \vert{}\vert{} '') \vert{}\vert{} !/^[0-9a-f]{40}$/i.test(tx.to || '')) {
+    if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from || '') || !/^[0-9a-f]{40}$/i.test(tx.to || '')) {
       return { valid: false, error: 'Địa chỉ người gửi/nhận phải có 40 ký tự hex.' };
     }
     if (!Number.isFinite(tx.amount) || tx.amount <= 0 || tx.amount > 1_000_000) {
