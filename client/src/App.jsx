@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
 import MainLayout from "./components/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
 import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer"; // Import thêm BlockHeaderViewer
+import { useBlockchainWebSocket } from "./hooks/useBlockchainWebSocket";
 import "./App.css";
 
 const statCards = [
@@ -210,6 +210,9 @@ function RecentTransactions() {
 }
 
 function App() {
+  // KẾT NÔI VỚI WEBSOCKET BLOCKCHAIN
+  useBlockchainWebSocket();
+
   return (
     <MainLayout>
       <div className="dashboard">
