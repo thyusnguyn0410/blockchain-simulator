@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import MainLayout from "./components/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
-import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer"; // Import thêm BlockHeaderViewer
+import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer"; 
+import MempoolManager from "./modules/blockchain/MempoolManager"; 
 import "./App.css";
 
 const statCards = [
@@ -254,7 +255,19 @@ function App() {
             <BlockHeaderViewer />
           </div>
         </section>
+        //MEMPOOL MANAGER 
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Mempool Manager</h2>
+                <p>Manage pending transactions before mining them into a block</p>
+              </div>
+            </div>
 
+            <MempoolManager />
+          </div>
+        </section>
         <section className="stats-grid">
           {statCards.map((card) => (
             <StatCard key={card.title} {...card} />

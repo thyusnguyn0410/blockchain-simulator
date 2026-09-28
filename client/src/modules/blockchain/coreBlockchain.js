@@ -1,6 +1,6 @@
 // Import các hàm mã hóa/băm từ các thư mục mô-đun liên quan
 import { calculateSHA256 as sha256 } from "../crypto/SHA-256.js";
-import { getMerkleRoot } from "../crypto/merkle.js";
+import { getMerkleRoot } from "../crypto/MerkleTree.js";
 import { mineBlock } from "./pow.js";
 
 // Chuỗi 64 số 0 mặc định (64 ký tự hex) dùng cho prevHash của khối Genesis
@@ -43,6 +43,7 @@ export class Block {
         return this.hash.slice(0, k) === "0".repeat(k);
     }
 }
+
 // 2. LỚP BLOCKCHAIN (QUẢN LÝ CHUỖI KHỐI)
 export class Blockchain {
     constructor(opts = {}) {
@@ -53,7 +54,7 @@ export class Blockchain {
 
         // Tự động tạo khối Genesis khởi tạo trừ khi tùy chọn autoGenesis bị tắt (false)
         if (opts.autoGenesis !== false) {
-            this.addBlock(opts.genesisTx || [{ sender: "System", recipient: "Genesis", amount: 0 }]);
+            this.addBlock(opts.genesisTx || [{ from: "System", to: "Genesis", amount: 0 }]);
         }
     }
 
