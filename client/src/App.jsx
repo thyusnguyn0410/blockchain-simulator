@@ -1,21 +1,209 @@
-import { useState } from 'react';
-import MainLayout from './components/MainLayout';
-import Dashboard from './pages/Dashboard';
-import BlockchainPage from './pages/BlockchainPage';
-import TransactionsPage from './pages/TransactionsPage';
-import MiningPage from './pages/MiningPage';
-import NodesPage from './pages/NodesPage';
-import SettingsPage from './pages/SettingsPage';
-import HelpPage from './pages/HelpPage';
-import './App.css';
-import './Pages.css';
+import MainLayout from "./components/MainLayout";
+import "./App.css";
 
-const pages = { Dashboard, Blockchain: BlockchainPage, Transactions: TransactionsPage, Mining: MiningPage, 'Network Nodes': NodesPage, Settings: SettingsPage, 'Help Center': HelpPage };
+const statCards = [
+  {
+    title: "Total Transactions",
+    value: "12,458",
+    description: "Transactions processed",
+    icon: "⇄",
+    color: "cyan",
+  },
+  {
+    title: "Active Nodes",
+    value: "24",
+    description: "Nodes currently online",
+    icon: "◎",
+    color: "green",
+  },
+  {
+    title: "Latest Block",
+    value: "#1,284",
+    description: "Mined 2 minutes ago",
+    icon: "#",
+    color: "purple",
+  },
+  {
+    title: "Network Hashrate",
+    value: "84.6 TH/s",
+    description: "Current network power",
+    icon: "⚡",
+    color: "orange",
+  },
+];
+
+const transactions = [
+  {
+    hash: "0x7a91...3f20",
+    from: "0xA12...91F",
+    to: "0xB55...D20",
+    amount: "2.45 BTC",
+    status: "Confirmed",
+  },
+  {
+    hash: "0x8b32...aa10",
+    from: "0xC89...102",
+    to: "0xD12...B99",
+    amount: "0.82 BTC",
+    status: "Confirmed",
+  },
+  {
+    hash: "0x3c44...fa72",
+    from: "0xE01...A82",
+    to: "0xF90...C14",
+    amount: "5.10 BTC",
+    status: "Pending",
+  },
+  {
+    hash: "0x9d81...cc04",
+    from: "0xA55...BD1",
+    to: "0xF33...E20",
+    amount: "1.25 BTC",
+    status: "Confirmed",
+  },
+];
+
+function StatCard({ title, value, description, icon, color }) {
+  return (
+    <article className="stat-card">
+      <div className="stat-card-top">
+        <span className="stat-title">{title}</span>
+        <span className={`stat-icon ${color}`}>{icon}</span>
+      </div>
+      <div className="stat-card-value">{value}</div>
+      <p className="stat-description">{description}</p>
+    </article>
+  );
+}
+
+function NetworkActivity() {
+  const chartData = [42, 68, 50, 78, 55, 88, 64, 92, 72, 100, 82, 70];
+
+  return (
+    <section className="dashboard-panel activity-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Network Activity</h2>
+          <p>Transaction activity over the last 7 days</p>
+        </div>
+        <select className="period-select" defaultValue="7" aria-label="Activity period">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+      <div className="chart" aria-label="Network activity chart">
+        {chartData.map((height, index) => (
+          <div className="chart-column" key={`${height}-${index}`}>
+            <div
+              className="chart-bar"
+              style={{ height: `${height}%` }}
+              title={`${height} transactions`}
+            />
+            <span>{index + 1}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NetworkStatus() {
+  return (
+    <section className="dashboard-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Network Status</h2>
+          <p>Current system status</p>
+        </div>
+      </div>
+      <div className="status-list">
+        <div className="status-row">
+          <span>Network Health</span>
+          <strong className="status-success"><i />Excellent</strong>
+        </div>
+        <div className="status-row">
+          <span>Block Time</span>
+          <strong>10.2 seconds</strong>
+        </div>
+        <div className="status-row">
+          <span>Connected Nodes</span>
+          <strong>24 / 24</strong>
+        </div>
+        <div className="status-row">
+          <span>Sync Status</span>
+          <strong className="status-cyan"><i />Fully Synced</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RecentTransactions() {
+  return (
+    <section className="dashboard-panel transactions-panel">
+      <div className="panel-heading">
+        <div>
+          <h2>Recent Transactions</h2>
+          <p>Latest transactions on the network</p>
+        </div>
+        <button type="button" className="outline-button">View all</button>
+      </div>
+      <div className="table-wrapper">
+        <table className="transactions-table">
+          <thead>
+            <tr>
+              <th>Transaction Hash</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction) => (
+              <tr key={transaction.hash}>
+                <td className="hash">{transaction.hash}</td>
+                <td className="address">{transaction.from}</td>
+                <td className="address">{transaction.to}</td>
+                <td>{transaction.amount}</td>
+                <td>
+                  <span className={`transaction-status ${transaction.status === "Confirmed" ? "confirmed" : "pending"}`}>
+                    {transaction.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
 
 function App() {
-  const [activePage, setActivePage] = useState('Dashboard');
-  const Page = pages[activePage] || Dashboard;
-  return <MainLayout activePage={activePage} onNavigate={setActivePage}><Page onNavigate={setActivePage} /></MainLayout>;
+  return (
+    <MainLayout>
+      <div className="dashboard">
+        <header className="page-header">
+          <div>
+            <span className="page-label">BLOCKCHAIN SIMULATOR</span>
+            <h1>Blockchain Dashboard</h1>
+            <p>Monitor your blockchain network and explore its current activity.</p>
+          </div>
+          <button type="button" className="primary-button">+ New Simulation</button>
+        </header>
+        <section className="stats-grid">
+          {statCards.map((card) => <StatCard key={card.title} {...card} />)}
+        </section>
+        <section className="dashboard-grid">
+          <NetworkActivity />
+          <NetworkStatus />
+        </section>
+        <RecentTransactions />
+      </div>
+    </MainLayout>
+  );
 }
 
 export default App;
