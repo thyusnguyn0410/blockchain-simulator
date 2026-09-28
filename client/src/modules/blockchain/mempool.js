@@ -1,5 +1,5 @@
-import { verifySignature as verifyECDSASignature, isValidPublicKey } from '../Crypto/ECDSA.js';
-import { calculateSHA256 as sha256 } from '../Crypto/SHA-256.js';
+import { verifySignature as verifyECDSASignature, isValidPublicKey } from '../crypto/ECDSA.js';
+import { calculateSHA256 as sha256 } from '../crypto/SHA-256.js';
 
 export class Mempool {
     constructor(getBalanceCallback) {
