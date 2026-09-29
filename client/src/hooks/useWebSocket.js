@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const DEFAULT_WS_URL = "ws://localhost:6001";
 
-export function useBlockchainWebSocket(url = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL) {
+export function useWebSocket(url = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL) {
   const socketRef = useRef(null);
   const reconnectTimerRef = useRef(null);
   const [connection, setConnection] = useState("connecting");
