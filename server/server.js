@@ -195,7 +195,26 @@ app.listen(HTTP_PORT, () => {
 // Khởi chạy WebSocket Server với WS_PORT chính xác của Node này
 if (typeof initP2PServer === 'function') {
   try {
-    initP2PServer({ wsPort: WS_PORT, blockchain, nodeId: NODE_ID, httpPort: HTTP_PORT, log });
+    initP2PServer({
+      wsPort: WS_PORT,
+      blockchain,
+      nodeId: NODE_ID,
+      httpPort: HTTP_PORT,
+      log,
+      // Snapshot giúp client có dữ liệu blockchain ngay sau khi kết nối,
+      // thay vì phải gọi lần lượt nhiều REST endpoint.
+      getSnapshot: () => ({
+        nodeId: NODE_ID,
+        httpPort: HTTP_PORT,
+        wsPort: WS_PORT,
+        status: 'online',
+        blocks: blockchain.chain,
+        mempool: blockchain.mempool,
+        logs: logs.slice(-50),
+        peers: getPeers(),
+        difficulty: blockchain.difficulty,
+      }),
+    });
   } catch (err) {
     // Dự phòng nếu initP2PServer nhận kiểu tham số cũ: initP2PServer(wsPort)
     initP2PServer(WS_PORT, blockchain);
