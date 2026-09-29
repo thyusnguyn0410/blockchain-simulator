@@ -3,9 +3,6 @@ echo ===================================================
 echo KHOI DONG 3 FULL NODE BLOCKCHAIN TRONG MANG P2P
 echo ===================================================
 
-:: Tat cac node chay ngam truoc do de tranh loi trung cong
-taskkill /F /IM node.exe >nul 2>&1
-
 :: Khoi dong Node 1: HTTP 3001, WS 6001
 start "Node 1 (Port 3001 / 6001)" cmd /k "cd /d %~dp0 && node server.js --http=3001 --ws=6001 --name=Node-1"
 timeout /t 2 >nul

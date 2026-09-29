@@ -1,60 +1,36 @@
 import CryptoJS from 'crypto-js';
 
-/**
- * TÍNH NĂNG 1: Tính mã băm SHA-256 dùng CryptoJS
- */
-export const calculateSHA256 = (data) => {
-  return CryptoJS.SHA256(data).toString(CryptoJS.enc.Hex).toLowerCase();
-};
+export const calculateSHA256 = (data) => CryptoJS.SHA256(String(data)).toString(CryptoJS.enc.Hex).toLowerCase();
 
-/**
- * TÍNH NĂNG PHỤ HỖ TRỢ GIAO DIỆN: Định dạng chuỗi Hash 64 ký tự
- */
-export const formatHashFormatted = (h) => 
-  h?.length === 64 ? h.match(/.{1,16}/g).map(l => l.match(/.{1,4}/g).join(' ')).join('\n') : h;
+export const formatHashFormatted = (hash) => (
+  hash?.length === 64 ? hash.match(/.{1,16}/g).map((line) => line.match(/.{1,4}/g).join(' ')).join('\n') : hash
+);
 
-/**
- * TÍNH NĂNG 2: Mô phỏng Hiệu ứng Thác đổ (Avalanche Effect)
- */
-export function checkAvalancheEffect(i1, i2) {
-  const h1 = calculateSHA256(i1);
-  const h2 = calculateSHA256(i2);
-  
-  const b1 = BigInt('0x' + h1).toString(2).padStart(256, '0');
-  const b2 = BigInt('0x' + h2).toString(2).padStart(256, '0');
-  
-  let diff = 0;
-  for (let i = 0; i < 256; i++) {
-    if (b1[i] !== b2[i]) diff++;
+export function checkAvalancheEffect(input1, input2) {
+  const hash1 = calculateSHA256(input1);
+  const hash2 = calculateSHA256(input2);
+  let differentBits = 0;
+  for (let i = 0; i < hash1.length; i += 1) {
+    differentBits += (parseInt(hash1[i], 16) ^ parseInt(hash2[i], 16)).toString(2).replaceAll('0', '').length;
   }
-  
-  return { 
-    input1: i1, 
-    hash1: h1, 
-    input2: i2, 
-    hash2: h2, 
-    differentBits: diff, 
-    percentageChange: `${((diff / 256) * 100).toFixed(2)}%` 
+  return {
+    input1, hash1, input2, hash2, differentBits,
+    percentageChange: `${((differentBits / 256) * 100).toFixed(2)}%`,
   };
 }
 
-/**
- * TÍNH NĂNG 3: Khai thác Block bằng Proof of Work (Bruteforce Nonce)
- */
-export function bruteforceHash(data, targetPrefix = '0000') {
-  let nonce = 0;
-  let hash = '';
-  const start = Date.now();
-  const prefix = targetPrefix.toLowerCase();
-  
-  do { 
-    nonce++;
-    hash = calculateSHA256(data + nonce); 
-  } while (!hash.startsWith(prefix));
-  
-  return { 
-    nonce, 
-    hash, 
-    timeTakenSeconds: `${((Date.now() - start) / 1000).toFixed(3)}s` 
-  };
+export function bruteforceHash(data, difficulty = 2, maxAttempts = 250_000) {
+  const level = typeof difficulty === 'string' && /^0{1,5}$/.test(difficulty)
+    ? difficulty.length
+    : Number(difficulty);
+  if (!Number.isInteger(level) || level < 1 || level > 5) throw new RangeError('Độ khó chỉ từ 1 đến 5.');
+  const prefix = '0'.repeat(level);
+  const startedAt = performance.now();
+  for (let nonce = 0; nonce < maxAttempts; nonce += 1) {
+    const hash = calculateSHA256(`${data}${nonce}`);
+    if (hash.startsWith(prefix)) {
+      return { nonce, hash, attempts: nonce + 1, timeTakenSeconds: `${((performance.now() - startedAt) / 1000).toFixed(3)}s` };
+    }
+  }
+  return { found: false, attempts: maxAttempts, timeTakenSeconds: `${((performance.now() - startedAt) / 1000).toFixed(3)}s` };
 }

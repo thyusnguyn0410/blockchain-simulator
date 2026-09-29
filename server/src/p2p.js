@@ -1,213 +1,211 @@
-/**
- * p2p.js
- * ------------------------------------------------------------------
- * Lớp mạng ngang hàng (Peer-to-Peer) của mỗi Full Node, sử dụng
- * WebSocket (thư viện `ws`) để các node "nói chuyện" trực tiếp với
- * nhau: bắt tay (handshake), trao đổi danh sách peer, hỏi/đáp block
- * mới nhất và đồng bộ toàn bộ chuỗi theo luật "chuỗi dài nhất".
- * ------------------------------------------------------------------
- */
-
 const WebSocket = require('ws');
 
-// Các loại thông điệp trao đổi giữa các node trong mạng P2P
 const MessageType = {
-  QUERY_LATEST: 'QUERY_LATEST', // Hỏi: "block mới nhất của bạn là gì?"
-  QUERY_ALL: 'QUERY_ALL', // Hỏi: "cho tôi xin toàn bộ chuỗi của bạn"
-  RESPONSE_BLOCKCHAIN: 'RESPONSE_BLOCKCHAIN', // Đáp lại bằng 1 block hoặc cả chuỗi
-  HANDSHAKE: 'HANDSHAKE', // Giới thiệu danh tính của node (nodeId, cổng...)
-  PEER_LIST: 'PEER_LIST', // Chia sẻ danh sách peer đã biết, giúp mạng lưới lan rộng
+  QUERY_LATEST: 'QUERY_LATEST',
+  QUERY_ALL: 'QUERY_ALL',
+  RESPONSE_BLOCKCHAIN: 'RESPONSE_BLOCKCHAIN',
+  HANDSHAKE: 'HANDSHAKE',
+  PEER_LIST: 'PEER_LIST',
+  NEW_TRANSACTION: 'NEW_TRANSACTION',
+  DEMO_FAUCET: 'DEMO_FAUCET',
+  EVENT: 'EVENT',
 };
 
-// Danh sách toàn bộ socket đang kết nối tới node này (peer khác + client giám sát/frontend)
 let sockets = [];
-// Metadata của từng socket: { nodeId, httpPort, wsPort }
-const peerMeta = new Map();
+let peerMeta = new Map();
+let context = null;
 
-/**
- * Khởi tạo WebSocket Server để LẮNG NGHE các kết nối đến (inbound) -
- * đây là vai trò "server" của node trong mạng P2P.
- */
 function initP2PServer({ wsPort, blockchain, nodeId, httpPort, log }) {
-  const wss = new WebSocket.Server({ port: wsPort });
+  context = { blockchain, nodeId, httpPort, wsPort, log };
+  sockets = [];
+  peerMeta = new Map();
+  const server = new WebSocket.Server({ port: wsPort });
+  server.on('connection', (socket) => initConnection(socket, context, false));
+  log(`P2P đang lắng nghe ws://localhost:${wsPort}`);
+  return server;
+}
 
-  wss.on('connection', (ws, req) => {
-    const remote = req.socket.remoteAddress;
-    log(`🔌 Nhận kết nối P2P mới (inbound) từ ${remote}`);
-    initConnection(ws, { blockchain, nodeId, httpPort, wsPort, log });
+function connectToPeers(urls, blockchain, nodeId, httpPort, wsPort, log) {
+  context = { blockchain, nodeId, httpPort, wsPort, log };
+  urls.forEach((url) => connectToPeer(url, context));
+}
+
+function connectToPeer(url, ctx = context) {
+  if (!ctx || sockets.some((socket) => socket.url === url && socket.readyState !== WebSocket.CLOSED)) return false;
+  let socket;
+  try {
+    socket = new WebSocket(url);
+  } catch (error) {
+    ctx.log(`Không thể kết nối ${url}: ${error.message}`);
+    return false;
+  }
+  socket.on('open', () => {
+    ctx.log(`Đã kết nối peer ${url}`);
+    initConnection(socket, ctx, true);
   });
-
-  log(`🛰️  P2P WebSocket Server đang lắng nghe tại ws://localhost:${wsPort}`);
-  return wss;
+  socket.on('error', (error) => ctx.log(`Lỗi peer ${url}: ${error.message}`));
+  return true;
 }
 
-/**
- * Chủ động kết nối (outbound) tới danh sách các peer đã biết trước
- * (ví dụ Node 2, Node 3 kết nối tới Node 1 khi khởi động).
- */
-function connectToPeers(peerUrls, blockchain, nodeId, httpPort, wsPort, log) {
-  peerUrls.forEach((url) => {
-    if (!url) return;
-    try {
-      const ws = new WebSocket(url);
-      ws.on('open', () => {
-        log(`✅ Kết nối outbound thành công tới peer ${url}`);
-        initConnection(ws, { blockchain, nodeId, httpPort, wsPort, log });
-      });
-      ws.on('error', () => {
-        log(`⚠️  Không thể kết nối tới peer ${url} (có thể peer chưa khởi động)`);
-      });
-    } catch (err) {
-      log(`⚠️  Lỗi khi khởi tạo kết nối tới ${url}: ${err.message}`);
-    }
-  });
+function initConnection(socket, ctx, outbound) {
+  if (peerMeta.has(socket)) return;
+  socket.url = socket.url || '';
+  sockets.push(socket);
+  peerMeta.set(socket, { nodeId: null, httpPort: null, wsPort: null, outbound });
+  socket.on('message', (raw) => handleMessage(socket, raw, ctx));
+  socket.on('close', () => closeConnection(socket, ctx));
+  socket.on('error', () => closeConnection(socket, ctx));
+  send(socket, { type: MessageType.HANDSHAKE, data: { nodeId: ctx.nodeId, httpPort: ctx.httpPort, wsPort: ctx.wsPort } });
+  send(socket, { type: MessageType.PEER_LIST, data: getKnownPeerUrls() });
+  send(socket, { type: MessageType.QUERY_LATEST });
+  send(socket, { type: MessageType.EVENT, event: 'status', data: publicStatus(ctx) });
 }
 
-/**
- * Thiết lập chung cho MỘT kết nối socket (dù là inbound hay outbound):
- * đăng ký lắng nghe sự kiện, rồi thực hiện chuỗi "bắt tay -> chia sẻ
- * peer -> hỏi block mới nhất" ngay khi vừa kết nối.
- */
-function initConnection(ws, ctx) {
-  const { blockchain, nodeId, httpPort, wsPort, log } = ctx;
-
-  sockets.push(ws);
-  peerMeta.set(ws, { nodeId: null, httpPort: null, wsPort: null });
-
-  ws.on('message', (raw) => handleMessage(ws, raw, ctx));
-  ws.on('close', () => closeConnection(ws, log));
-  ws.on('error', () => closeConnection(ws, log));
-
-  // 1) Bắt tay (handshake): giới thiệu danh tính của node mình cho phía kia
-  send(ws, { type: MessageType.HANDSHAKE, data: { nodeId, httpPort, wsPort } });
-  // 2) Chia sẻ danh sách peer đã biết -> giúp mạng lưới tự lan rộng
-  send(ws, { type: MessageType.PEER_LIST, data: getKnownPeerUrls() });
-  // 3) Hỏi ngay block mới nhất của phía kia để bắt đầu quá trình đồng bộ
-  send(ws, { type: MessageType.QUERY_LATEST });
+function publicStatus(ctx) {
+  return {
+    nodeId: ctx.nodeId,
+    httpPort: ctx.httpPort,
+    wsPort: ctx.wsPort,
+    height: ctx.blockchain.getLatestBlock().index,
+    peers: getPeers(),
+    mempoolSize: ctx.blockchain.mempool.length,
+  };
 }
 
-function closeConnection(ws, log) {
-  const meta = peerMeta.get(ws);
-  log(`❌ Peer "${meta?.nodeId || 'không rõ danh tính'}" đã ngắt kết nối`);
-  sockets = sockets.filter((s) => s !== ws);
-  peerMeta.delete(ws);
-}
-
-/**
- * Bộ định tuyến (router) xử lý thông điệp P2P nhận được, phân loại
- * theo MessageType và gọi hàm xử lý tương ứng.
- */
-function handleMessage(ws, raw, ctx) {
-  const { blockchain, log } = ctx;
+function handleMessage(socket, raw, ctx) {
   let message;
   try {
     message = JSON.parse(raw.toString());
-  } catch (err) {
-    return; // Bỏ qua thông điệp không đúng định dạng JSON
+  } catch {
+    ctx.log('Bỏ qua thông điệp P2P không phải JSON.');
+    return;
   }
-
   switch (message.type) {
-    case MessageType.QUERY_LATEST:
-      // Chỉ trả lời bằng đúng 1 block mới nhất (nhẹ, nhanh)
-      send(ws, {
-        type: MessageType.RESPONSE_BLOCKCHAIN,
-        data: [blockchain.getLatestBlock()],
-      });
-      break;
-
-    case MessageType.QUERY_ALL:
-      // Trả lời bằng toàn bộ chuỗi (dùng khi cần đồng bộ đầy đủ)
-      send(ws, { type: MessageType.RESPONSE_BLOCKCHAIN, data: blockchain.chain });
-      break;
-
-    case MessageType.RESPONSE_BLOCKCHAIN:
-      handleBlockchainResponse(ws, message.data, blockchain, log);
-      break;
-
     case MessageType.HANDSHAKE: {
-      const meta = peerMeta.get(ws) || {};
-      meta.nodeId = message.data.nodeId;
-      meta.httpPort = message.data.httpPort;
-      meta.wsPort = message.data.wsPort;
-      peerMeta.set(ws, meta);
-      log(`🤝 Bắt tay (handshake) hoàn tất với "${message.data.nodeId}" (HTTP :${message.data.httpPort})`);
+      const meta = peerMeta.get(socket) || {};
+      Object.assign(meta, message.data || {});
+      peerMeta.set(socket, meta);
+      ctx.log(`Bắt tay với ${meta.nodeId || 'peer chưa đặt tên'}`);
+      send(socket, { type: MessageType.PEER_LIST, data: getKnownPeerUrls() });
+      broadcast({ type: MessageType.EVENT, event: 'peers', data: getPeers() });
       break;
     }
-
-    case MessageType.PEER_LIST:
-      // Điểm mở rộng: có thể duyệt qua data để tự động kết nối tới
-      // các peer mới mà node này chưa biết, giúp mạng lưới tự lan rộng.
+    case MessageType.QUERY_LATEST:
+      send(socket, { type: MessageType.RESPONSE_BLOCKCHAIN, data: [ctx.blockchain.getLatestBlock()] });
       break;
-
-    default:
+    case MessageType.QUERY_ALL:
+      send(socket, { type: MessageType.RESPONSE_BLOCKCHAIN, data: ctx.blockchain.chain });
       break;
-  }
-}
-
-/**
- * Xử lý khi nhận được phản hồi chuỗi khối từ một peer:
- * - Nếu chuỗi của họ không dài hơn -> bỏ qua
- * - Nếu chỉ nhận 1 block và nối được trực tiếp -> thêm luôn
- * - Nếu 1 block nhưng không nối được -> thiếu dữ liệu, hỏi lại toàn bộ chuỗi
- * - Nếu nhận cả chuỗi -> áp dụng luật đồng thuận "chuỗi dài nhất"
- */
-function handleBlockchainResponse(ws, receivedChainRaw, blockchain, log) {
-  if (!Array.isArray(receivedChainRaw) || receivedChainRaw.length === 0) return;
-
-  const latestReceived = receivedChainRaw[receivedChainRaw.length - 1];
-  const latestHeld = blockchain.getLatestBlock();
-
-  if (latestReceived.index <= latestHeld.index) {
-    return; // Chuỗi của mình đã bằng hoặc dài hơn -> không cần xử lý gì thêm
-  }
-
-  if (receivedChainRaw.length === 1) {
-    if (latestReceived.previousHash === latestHeld.hash) {
-      // Nối thẳng được vào chuỗi hiện tại
-      if (blockchain.addBlock(latestReceived)) {
-        log(`⛓️  Nhận & nối trực tiếp Block #${latestReceived.index} từ peer`);
-        broadcastLatest(blockchain);
+    case MessageType.RESPONSE_BLOCKCHAIN:
+      handleBlockchainResponse(socket, message.data, ctx);
+      break;
+    case MessageType.NEW_TRANSACTION:
+      try {
+        const tx = ctx.blockchain.addToMempool(message.data);
+        ctx.log(`Nhận giao dịch ${tx.id.slice(0, 12)} từ peer`);
+        broadcast({ type: MessageType.EVENT, event: 'mempool', data: ctx.blockchain.mempool.length });
+        broadcast({ type: MessageType.NEW_TRANSACTION, data: tx }, socket);
+      } catch (error) {
+        ctx.log(`Từ chối giao dịch peer: ${error.message}`);
       }
-    } else {
-      // Thiếu (các) block ở giữa -> chủ động hỏi lại toàn bộ chuỗi của peer
-      log('📡 Phát hiện thiếu block trung gian -> yêu cầu đồng bộ toàn bộ chuỗi');
-      send(ws, { type: MessageType.QUERY_ALL });
+      break;
+    case MessageType.DEMO_FAUCET:
+      try {
+        if (ctx.blockchain.applyDemoFunding(message.data)) {
+          ctx.log(`Đồng bộ coin faucet demo cho ${message.data.address.slice(0, 10)}…`);
+          broadcast({ type: MessageType.DEMO_FAUCET, data: message.data }, socket);
+        }
+      } catch (error) {
+        ctx.log(`Từ chối cập nhật faucet peer: ${error.message}`);
+      }
+      break;
+    case MessageType.PEER_LIST:
+      // Không tự động mở kết nối từ peer-list để tránh vòng lặp kết nối.
+      break;
+    case MessageType.EVENT:
+      // EVENT là luồng monitor một chiều; node không relay event monitor thành log mới.
+      break;
+    default:
+      ctx.log(`Thông điệp P2P không hỗ trợ: ${String(message.type || 'unknown')}`);
+  }
+}
+
+function handleBlockchainResponse(socket, received, ctx) {
+  if (!Array.isArray(received) || received.length === 0) return;
+  const latest = received[received.length - 1];
+  if (received.length === 1) {
+    const held = ctx.blockchain.getLatestBlock();
+    if (latest.index === held.index && latest.hash === held.hash) return;
+    if (latest.index > held.index && ctx.blockchain.addBlock(latest)) {
+      ctx.log(`Chấp nhận block #${latest.index}`);
+      broadcastLatest(ctx.blockchain);
+      broadcast({ type: MessageType.EVENT, event: 'chain', data: ctx.blockchain.chain });
+      return;
     }
+    send(socket, { type: MessageType.QUERY_ALL });
+    return;
+  }
+  if (ctx.blockchain.replaceChain(received)) {
+    ctx.log(`Đồng thuận: áp dụng chuỗi có work cao hơn (height ${latest.index})`);
+    broadcastLatest(ctx.blockchain);
   } else {
-    // Nhận được cả một chuỗi -> so sánh & áp dụng Longest Chain Rule
-    if (blockchain.replaceChain(receivedChainRaw)) {
-      log(`🔄 Đồng bộ thành công! Thay thế bằng chuỗi dài hơn (height = ${receivedChainRaw.length - 1})`);
-      broadcastLatest(blockchain);
-    } else {
-      log('⚠️  Chuỗi nhận được không hợp lệ hoặc không dài hơn chuỗi hiện tại -> bỏ qua');
-    }
+    ctx.log('Từ chối chuỗi peer không hợp lệ hoặc có cumulative work thấp hơn.');
   }
+  broadcast({ type: MessageType.EVENT, event: 'chain', data: ctx.blockchain.chain });
 }
 
-/** Gửi 1 thông điệp JSON tới một socket cụ thể (nếu đang mở) */
-function send(ws, message) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(message));
-  }
+function send(socket, message) {
+  if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 }
 
-/** Phát (broadcast) 1 thông điệp tới TẤT CẢ các socket đang kết nối */
-function broadcast(message) {
-  sockets.forEach((ws) => send(ws, message));
-}
-
-/** Phát nhanh block mới nhất cho toàn mạng - gọi mỗi khi có block mới được đào/nhận */
-function broadcastLatest(blockchain) {
-  broadcast({ type: MessageType.RESPONSE_BLOCKCHAIN, data: [blockchain.getLatestBlock()] });
-}
-
-/** Lấy danh sách URL ws://... của các peer đã bắt tay thành công (dùng để chia sẻ tiếp) */
-function getKnownPeerUrls() {
-  const urls = [];
-  peerMeta.forEach((meta) => {
-    if (meta.wsPort) urls.push(`ws://localhost:${meta.wsPort}`);
+function broadcast(message, except = null) {
+  sockets.forEach((socket) => {
+    if (socket !== except) send(socket, message);
   });
-  return urls;
+}
+
+function broadcastLatest(blockchain) {
+  if (!context) return;
+  broadcast({ type: MessageType.RESPONSE_BLOCKCHAIN, data: [blockchain.getLatestBlock()] });
+  broadcast({ type: MessageType.EVENT, event: 'chain', data: blockchain.chain });
+}
+
+function broadcastTransaction(tx) {
+  broadcast({ type: MessageType.NEW_TRANSACTION, data: tx });
+}
+
+function broadcastDemoFaucet(funding) {
+  broadcast({ type: MessageType.DEMO_FAUCET, data: funding });
+}
+
+function closeConnection(socket, ctx = context) {
+  if (!peerMeta.has(socket)) return;
+  const peer = peerMeta.get(socket);
+  peerMeta.delete(socket);
+  sockets = sockets.filter((item) => item !== socket);
+  if (ctx) ctx.log(`Peer ${peer.nodeId || socket.url || 'không rõ'} đã ngắt kết nối`);
+  broadcast({ type: MessageType.EVENT, event: 'peers', data: getPeers() });
+}
+
+function disconnectPeer(url) {
+  const socket = sockets.find((item) => item.url === url);
+  if (!socket) return false;
+  socket.close(1000, 'Disconnected by node operator');
+  return true;
+}
+
+function getPeers() {
+  return Array.from(peerMeta.entries()).filter(([, meta]) => meta.nodeId).map(([socket, meta]) => ({
+    nodeId: meta.nodeId || socket.url || 'Peer',
+    httpPort: meta.httpPort,
+    wsPort: meta.wsPort,
+    url: socket.url,
+    status: socket.readyState === WebSocket.OPEN ? 'connected' : 'connecting',
+  }));
+}
+
+function getKnownPeerUrls() {
+  return getPeers().map((peer) => peer.url || (peer.wsPort ? `ws://localhost:${peer.wsPort}` : '')).filter(Boolean);
 }
 
 function getSockets() {
@@ -218,7 +216,13 @@ module.exports = {
   MessageType,
   initP2PServer,
   connectToPeers,
+  connectToPeer,
+  disconnectPeer,
   broadcast,
   broadcastLatest,
+  broadcastTransaction,
+  broadcastDemoFaucet,
+  getPeers,
+  getKnownPeerUrls,
   getSockets,
 };

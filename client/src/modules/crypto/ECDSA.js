@@ -1,76 +1,66 @@
 import elliptic from 'elliptic';
-import readline from 'readline';
+import { calculateSHA256 } from './SHA-256.js';
 
-// Khởi tạo đường cong elip secp256k1 (chuẩn Bitcoin/Ethereum)
-const ec = new (elliptic.ec)('secp256k1');
+const ec = new elliptic.ec('secp256k1');
 
-// 1. Sinh ngẫu nhiên cặp khóa (Private Key & Public Key)
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
 export const generateKeyPair = () => {
-  const kp = ec.genKeyPair();
-  return { privateKey: kp.getPrivate('hex'), publicKey: kp.getPublic('hex') };
+  const key = ec.genKeyPair();
+  return { privateKey: key.getPrivate('hex'), publicKey: key.getPublic('hex') };
 };
 
-// 2. Trích xuất Public Key từ Private Key do người dùng nhập
-export const getPublicKeyFromPrivate = (privKey) => {
-  try { return ec.keyFromPrivate(privKey, 'hex').getPublic('hex'); } catch { return null; }
-};
-
-// 3. Kiểm tra tính hợp lệ của Public Key trên đường cong secp256k1
-export const isValidPublicKey = (pubKeyHex) => {
+export const getPublicKeyFromPrivate = (privateKey) => {
   try {
-    const key = ec.keyFromPublic(pubKeyHex, 'hex');
+    if (!/^[0-9a-f]{64}$/i.test(privateKey)) return null;
+    const scalar = BigInt(`0x${privateKey}`);
+    if (scalar === 0n || scalar >= BigInt(`0x${ec.curve.n.toString(16)}`)) return null;
+    const key = ec.keyFromPrivate(privateKey, 'hex');
+    return key.getPublic('hex');
+  } catch {
+    return null;
+  }
+};
+
+export const isValidPublicKey = (publicKey) => {
+  try {
+    const key = ec.keyFromPublic(publicKey, 'hex');
     return key.validate().result;
   } catch {
     return false;
   }
 };
 
-// 4. Ký thông điệp bằng Private Key
-export const signMessage = (privKey, msg) => {
-  try { return ec.keyFromPrivate(privKey, 'hex').sign(msg).toDER('hex'); } catch { return null; }
-};
+export const getAddressFromPublicKey = (publicKey) => calculateSHA256(publicKey).slice(0, 40);
 
-// 5. Xác thực chữ ký số bằng Public Key (có hỗ trợ kiểm tra Public Key nhập thủ công)
-export const verifySignature = (pubKey, msg, sig) => {
-  try { 
-    if (!isValidPublicKey(pubKey)) return false;
-    return ec.keyFromPublic(pubKey, 'hex').verify(msg, sig); 
-  } catch { 
-    return false; 
+export const signMessage = (privateKey, message) => {
+  try {
+    if (!getPublicKeyFromPrivate(privateKey)) return null;
+    return ec.keyFromPrivate(privateKey, 'hex').sign(calculateSHA256(message), 'hex', { canonical: true }).toDER('hex');
+  } catch {
+    return null;
   }
 };
 
-//GIAO DIỆN KIỂM THỬ TRÊN TERMINAL (CLI)
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise((res) => rl.question(q, res));
+export const verifySignature = (publicKey, message, signature) => {
+  try {
+    return isValidPublicKey(publicKey) && ec.keyFromPublic(publicKey, 'hex').verify(calculateSHA256(message), signature);
+  } catch {
+    return false;
+  }
+};
 
-async function main() {
-  console.log('DEMO CHỮ KÝ SỐ ECDSA');
-
-  // BƯỚC 1: Nhập hoặc sinh ngẫu nhiên Private Key
-  let privKey = (await ask('1. Nhập Private Key Hex (ấn Enter để tự sinh): ')).trim();
-  if (!privKey) privKey = generateKeyPair().privateKey;
-  
-  const pubKey = getPublicKeyFromPrivate(privKey);
-  if (!pubKey) return console.log('Private Key không hợp lệ!'), rl.close();
-  console.log(`-> Private Key: ${privKey}\n-> Public Key : ${pubKey}\n`);
-
-  // BƯỚC 2: Nhập thông điệp cần ký
-  const msg = (await ask('2. Nhập nội dung thông điệp cần ký: ')).trim();
-  if (!msg) return console.log('Thông điệp không được để trống!'), rl.close();
-
-  const sig = signMessage(privKey, msg);
-  console.log(`-> Chữ ký số (DER Hex): ${sig}\n`);
-
-  // BƯỚC 3: Kiểm tra chữ ký bằng Private Key hoặc Public Key tùy chỉnh
-  const testPrivKey = (await ask('3. Nhập Private Key kiểm tra (Enter để dùng lại khóa ban đầu): ')).trim() || privKey;
-  const testPubKey = getPublicKeyFromPrivate(testPrivKey);
-
-  const isValid = testPubKey && verifySignature(testPubKey, msg, sig);
-  console.log(`\n=> KẾT QUẢ XÁC THỰC: ${isValid ? 'CHỮ KÝ HỢP LỆ' : 'CHỮ KÝ KHÔNG HỢP LỆ'}`);
-
-  rl.close();
+export function createSignedTransaction(privateKey, tx) {
+  const publicKey = getPublicKeyFromPrivate(privateKey);
+  if (!publicKey) throw new Error('Private key không hợp lệ.');
+  const body = { from: getAddressFromPublicKey(publicKey), to: tx.to, amount: Number(tx.amount), nonce: Number(tx.nonce) };
+  return { ...body, publicKey, signature: signMessage(privateKey, canonical(body)) };
 }
 
-// Chạy trực tiếp CLI khi gọi lệnh node client/src/ECDSA.js
-main();
+export { canonical as canonicalize };
