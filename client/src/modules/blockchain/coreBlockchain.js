@@ -27,7 +27,7 @@ export class Block {
 
     // Tính lại Merkle Root từ transaction hiện tại
     calculateMerkleRoot() {
-            return getMerkleRoot(this.transactions);
+        return getMerkleRoot(this.transactions);
     }
 
     // Đồng bộ Merkle Root với transaction hiện tại
