@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 
 // IMPORT CÁC MODULE THUẬT TOÁN
-import { generateKeyPair, signMessage } from '../crypto/ECDSA.js';
+import { generateKeyPair, signMessage, getAddressFromPublicKey, canonical } from '../crypto/ECDSA.js';
 import { calculateSHA256 } from '../crypto/SHA-256.js';
 import { Blockchain, Block } from './coreBlockchain.js';
 import { Mempool } from './mempool.js';
@@ -97,7 +97,7 @@ export default function MempoolManager() {
       emoji: '🦊',
       privateKey: kp.privateKey,
       publicKey: kp.publicKey,
-      addr: '0x' + calculateSHA256(kp.publicKey).slice(0, 40)
+      addr: getAddressFromPublicKey(kp.publicKey)
     };
   };
 
@@ -118,7 +118,7 @@ export default function MempoolManager() {
         emoji: item.emoji,
         privateKey: kp.privateKey,
         publicKey: kp.publicKey,
-        addr: '0x' + calculateSHA256(kp.publicKey).slice(0, 40)
+        addr: getAddressFromPublicKey(kp.publicKey)
       };
     });
   });
@@ -243,8 +243,7 @@ export default function MempoolManager() {
       note: note || ''
     };
 
-    const rawData = `${txData.from}:${txData.to}:${txData.amount}:${txData.nonce}`;
-    const txHash = calculateSHA256(rawData);
+    const txHash = calculateSHA256(canonical(txData));
     const signatureHex = signMessage(me.privateKey, txHash);
 
     const rVal = calculateSHA256(txHash + me.privateKey).slice(0, 64);
