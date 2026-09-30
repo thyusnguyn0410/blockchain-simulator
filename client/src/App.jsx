@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import MainLayout from "./components/MainLayout";
+import MainLayout from "./layouts/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
-import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer"; // Import thêm BlockHeaderViewer
+import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
+import MempoolManager from "./modules/blockchain/MempoolManager";
+import { useWebSocket } from "./hooks/useWebSocket";
+import { usePolling } from "./hooks/usePolling";
+import "./App.css";
 import "./App.css";
 
 const statCards = [
@@ -73,9 +76,7 @@ function StatCard({ title, value, description, icon, color }) {
         <span className="stat-title">{title}</span>
         <span className={`stat-icon ${color}`}>{icon}</span>
       </div>
-
       <div className="stat-card-value">{value}</div>
-
       <p className="stat-description">{description}</p>
     </article>
   );
@@ -91,17 +92,15 @@ function NetworkActivity() {
           <h2>Network Activity</h2>
           <p>Transaction activity over the last 7 days</p>
         </div>
-
-        <select className="period-select" defaultValue="7">
+        <select className="period-select" defaultValue="7" aria-label="Activity period">
           <option value="7">Last 7 days</option>
           <option value="30">Last 30 days</option>
           <option value="90">Last 90 days</option>
         </select>
       </div>
-
-      <div className="chart">
+      <div className="chart" aria-label="Network activity chart">
         {chartData.map((height, index) => (
-          <div className="chart-column" key={index}>
+          <div className="chart-column" key={`${height}-${index}`}>
             <div
               className="chart-bar"
               style={{ height: `${height}%` }}
@@ -115,7 +114,10 @@ function NetworkActivity() {
   );
 }
 
-function NetworkStatus() {
+function NetworkStatus({ nodeStatus, activeUrl, loading, error }) {
+  // Kiểm tra trạng thái mạng dựa trên dữ liệu nodeStatus
+  const isOnline = nodeStatus?.status === "online";
+
   return (
     <section className="dashboard-panel">
       <div className="panel-heading">
@@ -124,33 +126,38 @@ function NetworkStatus() {
           <p>Current system status</p>
         </div>
       </div>
-
       <div className="status-list">
         <div className="status-row">
           <span>Network Health</span>
-          <strong className="status-success">
+          <strong className={isOnline ? "status-success" : "status-cyan"}> // Hiển thị trạng thái mạng
             <i />
-            Excellent
+            {loading ? "Đang kiểm tra..." : isOnline ? "Đang hoạt động" : "Chưa xác định"} // Hiển thị trạng thái mạng dựa trên dữ liệu nodeStatus
           </strong>
         </div>
-
         <div className="status-row">
           <span>Block Time</span>
           <strong>10.2 seconds</strong>
         </div>
-
         <div className="status-row">
           <span>Connected Nodes</span>
-          <strong>24 / 24</strong>
-        </div>
-
-        <div className="status-row">
-          <span>Sync Status</span>
-          <strong className="status-cyan">
-            <i />
-            Fully Synced
+          <strong>
+            {nodeStatus?.peers ?? 0} kết nối // Hiển thị số lượng node kết nối dựa trên dữ liệu nodeStatus
           </strong>
         </div>
+        <div className="status-row">
+          <span>Node đang sử dụng</span> // Hiển thị URL node đang hoạt động
+          <strong className="status-cyan">
+            <i />
+            {activeUrl || "Chưa kết nối"} // Hiển thị URL node đang hoạt động hoặc thông báo nếu chưa kết nối
+          </strong>
+        </div>
+
+        {error && (
+          <div className="status-row">
+            <span>Lỗi kết nối</span>
+            <strong className="status-cyan">{error.message}</strong>
+          </div>
+        )} // Hiển thị thông báo lỗi nếu có lỗi kết nối
       </div>
     </section>
   );
@@ -164,12 +171,8 @@ function RecentTransactions() {
           <h2>Recent Transactions</h2>
           <p>Latest transactions on the network</p>
         </div>
-
-        <button type="button" className="outline-button">
-          View all
-        </button>
+        <button type="button" className="outline-button">View all</button>
       </div>
-
       <div className="table-wrapper">
         <table className="transactions-table">
           <thead>
@@ -181,7 +184,6 @@ function RecentTransactions() {
               <th>Status</th>
             </tr>
           </thead>
-
           <tbody>
             {transactions.map((transaction) => (
               <tr key={transaction.hash}>
@@ -190,13 +192,7 @@ function RecentTransactions() {
                 <td className="address">{transaction.to}</td>
                 <td>{transaction.amount}</td>
                 <td>
-                  <span
-                    className={`transaction-status ${
-                      transaction.status === "Confirmed"
-                        ? "confirmed"
-                        : "pending"
-                    }`}
-                  >
+                  <span className={`transaction-status ${transaction.status === "Confirmed" ? "confirmed" : "pending"}`}>
                     {transaction.status}
                   </span>
                 </td>
@@ -210,6 +206,15 @@ function RecentTransactions() {
 }
 
 function App() {
+  // KẾT NÔI VỚI WEBSOCKET BLOCKCHAIN
+  useWebSocket();
+  const {
+    data: nodeStatus,
+    activeUrl,
+    loading,
+    error,
+  } = usePolling(); // Sử dụng hook usePolling để lấy trạng thái node từ các URL API
+
   return (
     <MainLayout>
       <div className="dashboard">
@@ -217,14 +222,9 @@ function App() {
           <div>
             <span className="page-label">BLOCKCHAIN SIMULATOR</span>
             <h1>Blockchain Dashboard</h1>
-            <p>
-              Monitor your blockchain network and explore its current activity.
-            </p>
+            <p>Monitor your blockchain network and explore its current activity.</p>
           </div>
-
-          <button type="button" className="primary-button">
-            + New Simulation
-          </button>
+          <button type="button" className="primary-button">+ New Simulation</button>
         </header>
 
         / SHA-256 VISUALIZER /
@@ -254,18 +254,31 @@ function App() {
             <BlockHeaderViewer />
           </div>
         </section>
+        //MEMPOOL MANAGER 
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Mempool Manager</h2>
+                <p>Manage pending transactions before mining them into a block</p>
+              </div>
+            </div>
 
-        <section className="stats-grid">
-          {statCards.map((card) => (
-            <StatCard key={card.title} {...card} />
-          ))}
+            <MempoolManager />
+          </div>
         </section>
-
+        <section className="stats-grid">
+          {statCards.map((card) => <StatCard key={card.title} {...card} />)}
+        </section>
         <section className="dashboard-grid">
           <NetworkActivity />
-          <NetworkStatus />
+          <NetworkStatus
+            nodeStatus={nodeStatus}
+            activeUrl={activeUrl}
+            loading={loading}
+            error={error} // Hiển thị thông tin trạng thái mạng dựa trên dữ liệu nodeStatus, activeUrl, loading và error
+          />
         </section>
-
         <RecentTransactions />
       </div>
     </MainLayout>

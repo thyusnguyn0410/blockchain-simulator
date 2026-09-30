@@ -14,10 +14,14 @@ const { WebSocketServer, WebSocket } = require('ws');
 const { isValidChain } = require('./blockchain.js');
 
 const MessageType = {
+  // Message riêng của React client để nhận dạng kết nối giao diện.
+  CLIENT_HELLO: 'CLIENT_HELLO',
   QUERY_LATEST_BLOCK: 'QUERY_LATEST_BLOCK',   // "Cho tôi biết block mới nhất của bạn"
   QUERY_ALL_BLOCKS: 'QUERY_ALL_BLOCKS',       // "Cho tôi xem toàn bộ chain của bạn"
   RESPONSE_BLOCKCHAIN: 'RESPONSE_BLOCKCHAIN', // Trả lời 1 trong 2 câu hỏi trên (data = mảng block)
   NEW_TRANSACTION: 'NEW_TRANSACTION',         // Dữ liệu/giao dịch mới cần lan truyền vào Mempool
+  // Event dùng để gửi snapshot hoặc thông báo realtime cho client.
+  EVENT: 'EVENT',
 };
 
 class P2PServer {
@@ -26,11 +30,13 @@ class P2PServer {
    * @param {number} opts.p2pPort         Cổng WebSocket của Node này (vd 4001/4002/4003)
    * @param {import('./blockchain.js').Blockchain} opts.blockchain  Instance blockchain của Node này
    * @param {(line:string)=>void} [opts.onLog]  Callback log — server.js in ra console / lưu buffer cho LiveLogViewer
+   * @param {()=>object} [opts.getSnapshot]  Snapshot gửi cho client browser khi bắt tay
    */
-  constructor({ p2pPort, blockchain, onLog }) {
+  constructor({ p2pPort, blockchain, onLog, getSnapshot }) {
     this.p2pPort = p2pPort;
     this.blockchain = blockchain;
     this.onLog = onLog || function () {};
+    this.getSnapshot = getSnapshot || (() => ({}));
     this.sockets = []; // tất cả kết nối đang mở, cả inbound (server) lẫn outbound (client)
   }
 
@@ -115,6 +121,18 @@ class P2PServer {
 
   _handleMessage(message, ws) {
     switch (message.type) {
+      case MessageType.CLIENT_HELLO:
+        // Đánh dấu socket này là trình duyệt để không tính vào số peer P2P.
+        ws.__isClient = true;
+        // Snapshot là ảnh chụp trạng thái hiện tại của blockchain node:
+        // chain, mempool, log và thông tin kết nối tại thời điểm bắt tay.
+        this._write(ws, {
+          type: MessageType.EVENT,
+          event: 'snapshot',
+          data: this.getSnapshot(),
+        });
+        break;
+
       case MessageType.QUERY_LATEST_BLOCK:
         this._write(ws, this._responseLatestMsg());
         break;
@@ -232,6 +250,10 @@ class P2PServer {
     this.broadcast(this._newTransactionMsg(tx));
   }
 
+  broadcastEvent(event, data) {
+    this.broadcast({ type: MessageType.EVENT, event, data });
+  }
+
   getPeerCount() {
     return this.sockets.length;
   }
@@ -271,6 +293,71 @@ class P2PServer {
   _newTransactionMsg(tx) {
     return { type: MessageType.NEW_TRANSACTION, data: tx };
   }
+
+let activeServer = null;
+
+function initP2PServer({ wsPort, blockchain, log, getSnapshot }) {
+  // Tạo WebSocket server cho node hiện tại; React client cũng kết nối vào cổng này.
+  activeServer = new P2PServer({
+    p2pPort: wsPort,
+    blockchain,
+    onLog: log,
+    getSnapshot,
+  }).listen();
+  return activeServer;
 }
 
-module.exports = { P2PServer, MessageType };
+function connectToPeer(peerAddress) {
+  if (!activeServer) return false;
+  activeServer.connectToPeer(peerAddress);
+  return true;
+}
+
+function connectToPeers(peers) {
+  if (!activeServer) return;
+  peers.forEach((peer) => activeServer.connectToPeer(peer));
+}
+
+function disconnectPeer(peerAddress) {
+  if (!activeServer) return false;
+  const peer = activeServer.sockets.find((socket) => socket.__peerAddress === peerAddress);
+  if (!peer) return false;
+  peer.close();
+  return true;
+}
+
+function broadcast(message) {
+  if (activeServer) activeServer.broadcast(message);
+}
+
+function broadcastLatest() {
+  if (activeServer) activeServer.broadcastLatestBlock();
+}
+
+function broadcastTransaction(tx) {
+  if (activeServer) activeServer.broadcastTransaction(tx);
+}
+
+function getSockets() {
+  return activeServer ? activeServer.sockets : [];
+}
+
+function getPeers() {
+  return getSockets()
+    .filter((socket) => !socket.__isClient)
+    .map((socket) => socket.__peerAddress || 'inbound-peer');
+}
+
+module.exports = {
+  P2PServer,
+  MessageType,
+  initP2PServer,
+  connectToPeers,
+  connectToPeer,
+  disconnectPeer,
+  broadcast,
+  broadcastLatest,
+  broadcastTransaction,
+  getSockets,
+  getPeers,
+};

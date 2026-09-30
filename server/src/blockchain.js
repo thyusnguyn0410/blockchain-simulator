@@ -196,6 +196,101 @@ function getTransactionId(tx) {
  * @param {object} tx - Giao dịch chứa chữ ký số
  * @returns {boolean} - true nếu chữ ký hợp lệ
  */
+}
+
+/**
+ * Khai thác một khối mới bằng thuật toán Proof-of-Work
+ * @param {number} index - Vị trí của khối trong chuỗi
+ * @param {string} prevHash - Mã băm của khối liền trước
+ * @param {Array} transactions - Mảng các giao dịch trong khối
+ * @param {number} difficulty - Độ khó đào khối
+ * @returns {object} - Khối hợp lệ sau khi đào kèm thông số số lần thử và thời gian
+ */
+function mineBlock(index, prevHash, transactions, difficulty = 2) {
+  const level = Math.min(MAX_DIFFICULTY, Math.max(MIN_DIFFICULTY, Number(difficulty) || 1));
+  const block = {
+    version: 1,
+    index,
+    prevHash, // Khớp chuẩn prevHash
+    merkleRoot: calculateMerkleRoot(transactions),
+    timestamp: Math.floor(Date.now() / 1000),
+    difficulty: level,
+    nonce: 0,
+    transactions,
+  };
+
+  const prefix = '0'.repeat(level);
+  const startedAt = Date.now();
+  const maximumAttempts = 10_000_000;
+  let attempts = 0;
+
+  while (attempts < maximumAttempts) {
+    block.hash = calculateHashForBlock(block);
+    attempts += 1;
+    if (block.hash.startsWith(prefix)) break;
+    block.nonce += 1;
+  }
+
+  if (!block.hash.startsWith(prefix)) {
+    throw new Error(`Không tìm thấy proof trong ${maximumAttempts.toLocaleString()} lần thử; hãy giảm độ khó.`);
+  }
+
+  return Object.assign(block, {
+    attempts,
+    timeTakenMs: Date.now() - startedAt,
+  });
+}
+
+/**
+ * Kiểm tra tính hợp lệ của một khối mới khi nối tiếp khối trước đó
+ * @param {object} block - Khối mới
+ * @param {object} previousBlock - Khối trước đó
+ * @returns {boolean} - true nếu khối hoàn toàn hợp lệ
+ */
+function isValidNewBlock(block, previousBlock) {
+  if (!block || !previousBlock || block.index !== previousBlock.index + 1) return false;
+  if (block.prevHash !== previousBlock.hash) return false;
+  if (!Number.isInteger(block.difficulty) || block.difficulty < MIN_DIFFICULTY || block.difficulty > MAX_DIFFICULTY) return false;
+  if (!Array.isArray(block.transactions)) return false;
+  if (calculateMerkleRoot(block.transactions) !== block.merkleRoot) return false;
+  if (calculateHashForBlock(block) !== block.hash) return false;
+  return block.hash.startsWith('0'.repeat(block.difficulty));
+}
+
+/**
+ * Rút trích địa chỉ ví công khai từ Khóa công khai (Public Key Hex)
+ * Địa chỉ ví là 40 ký tự đầu của chuỗi băm Public Key
+ * @param {string} publicKey - Public Key dạng Hex
+ * @returns {string} - Địa chỉ ví (40 ký tự Hex)
+ */
+function getAddress(publicKey) {
+  return sha256(publicKey).slice(0, 40);
+}
+
+/**
+ * Lấy định danh duy nhất (TXID) của giao dịch
+ * @param {object} tx - Đối tượng giao dịch
+ * @returns {string} - Mã băm đại diện giao dịch
+ */
+function getTransactionId(tx) {
+  if (tx && tx.from && tx.to) {
+    return sha256(stableStringify({
+      from: tx.from,
+      to: tx.to,
+      amount: tx.amount,
+      nonce: tx.nonce,
+      publicKey: tx.publicKey,
+      signature: tx.signature,
+    }));
+  }
+  return sha256(stableStringify(tx));
+}
+
+/**
+ * Xác thực chữ ký số ECDSA (secp256k1) của giao dịch
+ * @param {object} tx - Giao dịch chứa chữ ký số
+ * @returns {boolean} - true nếu chữ ký hợp lệ
+ */
 function verifyTransactionSignature(tx) {
   if (!tx.publicKey || !tx.signature || !/^[0-9a-f]+$/i.test(tx.publicKey)) return false;
   try {
@@ -245,7 +340,7 @@ function hasValidLedger(chain) {
       }
 
       // Xử lý chuyển tiền thông thường
-      if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from \vert{}\vert{} '') \vert{}\vert{} !/^[0-9a-f]{40}$/i.test(tx.to || '')) return false;
+      if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from || '') || !/^[0-9a-f]{40}$/i.test(tx.to || '')) return false;
       if (!Number.isFinite(tx.amount) || tx.amount <= 0 || !Number.isSafeInteger(tx.nonce) || tx.nonce < 0) return false;
       if (getAddress(tx.publicKey || '') !== tx.from || !verifyTransactionSignature(tx)) return false;
       
@@ -385,7 +480,7 @@ class Blockchain {
    * Kiểm tra tính hợp lệ của một giao dịch trước khi đưa vào Mempool
    */
   validateTransaction(tx) {
-    if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from \vert{}\vert{} '') \vert{}\vert{} !/^[0-9a-f]{40}$/i.test(tx.to || '')) {
+    if (!tx || !/^[0-9a-f]{40}$/i.test(tx.from || '') || !/^[0-9a-f]{40}$/i.test(tx.to || '')) {
       return { valid: false, error: 'Địa chỉ người gửi/nhận phải có 40 ký tự hex.' };
     }
     if (!Number.isFinite(tx.amount) || tx.amount <= 0 || tx.amount > 1_000_000) {

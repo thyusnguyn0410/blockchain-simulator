@@ -849,3 +849,59 @@
     gap: 5px;
   }
 }
+/* Additional page-level UI */
+.status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; background: rgba(52,211,153,.12); color: #34d399; }
+.status-badge.success::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status-badge.warning { background: rgba(245,158,11,.12); color: #fbbf24; }
+.status-badge.info { background: rgba(34,211,238,.12); color: #22d3ee; }
+.toolbar { display: flex; gap: 12px; }
+.search-input, .filter-select { min-height: 42px; border: 1px solid rgba(148,163,184,.2); border-radius: 10px; background: rgba(15,23,42,.8); color: #cbd5e1; padding: 0 14px; outline: none; }
+.search-input { flex: 1; min-width: 180px; } .filter-select { min-width: 150px; }
+.search-input:focus, .filter-select:focus { border-color: #22d3ee; }
+.node-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.summary-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border: 1px solid rgba(148,163,184,.13); border-radius: 16px; background: rgba(15,23,42,.74); }
+.summary-card span, .summary-card small { color: #94a3b8; font-size: 12px; } .summary-card strong { color: #f8fafc; font-size: 25px; } .summary-card .status-badge { align-self: flex-start; }
+.node-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.node-card { padding: 18px; border: 1px solid rgba(148,163,184,.13); border-radius: 13px; background: rgba(2,6,23,.35); }
+.node-card-top { display: flex; align-items: center; justify-content: space-between; } .node-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: #042f35; background: #22d3ee; font-weight: 800; }
+.node-card h3 { margin: 18px 0 5px; color: #f8fafc; font-size: 15px; } .node-card code { color: #64748b; font-size: 11px; }
+.node-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; } .node-details span { color: #cbd5e1; font-size: 11px; } .node-details b { display: block; margin-bottom: 4px; color: #64748b; font-size: 9px; text-transform: uppercase; }
+.utility-panel { display: flex; flex-direction: column; align-items: flex-start; max-width: 650px; } .utility-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 15px; background: rgba(34,211,238,.12); color: #22d3ee; font-size: 26px; } .utility-panel h2 { margin: 22px 0 8px; color: #f8fafc; } .utility-panel p { max-width: 560px; margin: 0 0 22px; color: #94a3b8; line-height: 1.7; font-size: 14px; }
+@media (max-width: 760px) { .toolbar, .node-summary { grid-template-columns: 1fr; display: grid; } .node-grid { grid-template-columns: 1fr; } .filter-select { width: 100%; } }
+/* ===== Card glassmorphism ===== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* ===== Button tương tác ===== */
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.ui-button:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.1); }
+.ui-button:active:not(:disabled) { transform: translateY(0) scale(0.97); }
+.ui-button:focus-visible { outline: 2px solid #22d3ee; outline-offset: 2px; }
+.ui-button:disabled { opacity: 0.55; cursor: not-allowed; }
+.ui-button-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ui-spin 0.7s linear infinite;
+}
+@keyframes ui-spin { to { transform: rotate(360deg); } }
