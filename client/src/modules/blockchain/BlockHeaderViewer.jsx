@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
 import { Blockchain } from './coreBlockchain.js';
-import { calculateSHA256 as sha256 } from '../crypto/SHA-256.js';
 
 export default function BlockHeaderViewer() {
+  // Khởi tạo sẵn 5 khối có độ khó khác nhau (Diff 0, 1, 2, 3, 4)
   const createInitialChain = () => {
-    const chain = new Blockchain({ autoGenesis: true, difficulty: 0 });
-    chain.addBlock([
-      { sender: "Alice", recipient: "Bob", amount: 12.5 }
-    ]);
+    const chain = new Blockchain({ autoGenesis: false });
 
-    chain.toArray().forEach(block => {
-      block.originalTransactions = JSON.parse(JSON.stringify(block.transactions));
-      block.originalMerkleRoot = block.merkleRoot;
+    const blocksData = [
+      { difficulty: 0, txs: [{ from: "Genesis", to: "Alice", amount: 50, fee: 0, nonce: 0 }] },
+      { difficulty: 1, txs: [{ from: "Alice", to: "Bob", amount: 12.5, fee: 0.001, nonce: 1 }] },
+      { difficulty: 2, txs: [{ from: "Bob", to: "Charlie", amount: 5.0, fee: 0.002, nonce: 2 }] },
+      { difficulty: 3, txs: [{ from: "Charlie", to: "David", amount: 2.5, fee: 0.003, nonce: 3 }] },
+      { difficulty: 4, txs: [{ from: "David", to: "Eva", amount: 1.0, fee: 0.005, nonce: 4 }] }
+    ];
+
+    blocksData.forEach((item) => {
+      chain.difficulty = item.difficulty;
+      chain.addBlock(item.txs);
     });
 
     return chain;
@@ -20,47 +25,17 @@ export default function BlockHeaderViewer() {
   const [blockchain, setBlockchain] = useState(createInitialChain);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [isVerified, setIsVerified] = useState(false);
-  const [, forceUpdate] = useState({});
-
-  const [sender, setSender] = useState('');
-  const [recipient, setRecipient] = useState('');
-  const [amount, setAmount] = useState('');
 
   const blocks = blockchain.toArray();
   const selectedBlock = blocks[selectedIndex] || blocks[0];
 
-  // Tìm chỉ số của Khối ĐẦU TIÊN trong chuỗi bị hỏng (First Broken Block Index)
-  const getFirstBrokenIndex = () => {
-    let chainIsBroken = false;
-    for (let idx = 0; idx < blocks.length; idx++) {
-      const block = blocks[idx];
-      const isSelfHashValid = block.hash === block.calculateHash();
-      const isLinkValid = idx === 0 ? true : block.prevHash === blocks[idx - 1].hash;
+  const validationReport = blockchain.validateDetailed();
+  const validityStatusList = blocks.map((_, idx) =>
+    validationReport[idx]?.valid ?? false
+  );
+  const selectedBlockValid = validationReport[selectedIndex]?.valid ?? false;
 
-      if (!isSelfHashValid || !isLinkValid) {
-        return idx; // Khối đầu tiên phát hiện bị sai
-      }
-    }
-    return -1; // Chuỗi hoàn toàn hợp lệ
-  };
-
-  const firstBrokenIdx = getFirstBrokenIndex();
-
-  const getChainValidityStatus = () => {
-    if (firstBrokenIdx === -1) {
-      return blocks.map(() => true);
-    }
-    // Tất cả các khối từ firstBrokenIdx trở đi đều bị INVALID
-    return blocks.map((_, idx) => idx < firstBrokenIdx);
-  };
-
-  const validityStatusList = getChainValidityStatus();
-  const selectedBlockValid = validityStatusList[selectedIndex];
-
-  const calculatedHash = selectedBlock ? selectedBlock.calculateHash() : '';
-  const txBodyHash = selectedBlock
-    ? sha256(JSON.stringify(selectedBlock.transactions))
-    : '';
+  const txBodyHash = selectedBlock?.merkleRoot || '';
 
   const handleSelectBlock = (idx) => {
     setSelectedIndex(idx);
@@ -75,58 +50,6 @@ export default function BlockHeaderViewer() {
     setBlockchain(createInitialChain());
     setSelectedIndex(0);
     setIsVerified(false);
-    setSender('');
-    setRecipient('');
-    setAmount('');
-  };
-
-  const handleAddBlock = (e) => {
-    e.preventDefault();
-    if (!sender || !recipient || !amount) return;
-
-    const newTx = [{ sender, recipient, amount: Number(amount) }];
-    const newBlock = blockchain.addBlock(newTx);
-
-    newBlock.originalTransactions = JSON.parse(JSON.stringify(newTx));
-    newBlock.originalMerkleRoot = newBlock.merkleRoot;
-
-    setSender('');
-    setRecipient('');
-    setAmount('');
-    setSelectedIndex(blockchain.length - 1);
-    setIsVerified(false);
-    forceUpdate({});
-  };
-
-  // GIẢ MẠO DỮ LIỆU KHỐI (TAMPER)
-  const handleTamperBlock = (idx) => {
-    if (idx === 0) return;
-
-    const fakeTransactions = [
-      { sender: "Hacker_" + Math.floor(Math.random() * 1000), recipient: "Attacker", amount: 999999 }
-    ];
-    
-    blockchain.tamper(idx, fakeTransactions);
-    setIsVerified(false);
-    forceUpdate({});
-  };
-
-  // VÁ KHỐI: BẮT BUỘC KHÔI PHỤC TỪ KHỐI ĐẦU TIÊN BỊ HỎNG
-  const handleFixBlock = (targetIdx) => {
-    const allBlocks = blockchain.toArray();
-
-    for (let i = targetIdx; i < allBlocks.length; i++) {
-      const b = allBlocks[i];
-      if (b.originalTransactions) {
-        b.transactions = JSON.parse(JSON.stringify(b.originalTransactions));
-        b.merkleRoot = b.originalMerkleRoot;
-      }
-    }
-
-    blockchain.recomputeFrom(targetIdx);
-    
-    setIsVerified(false);
-    forceUpdate({});
   };
 
   return (
@@ -137,42 +60,14 @@ export default function BlockHeaderViewer() {
           <div style={styles.searchIconBox}>🔍</div>
           <div>
             <h2 style={styles.title}>Blockchain Explorer</h2>
-            <p style={styles.subtitle}>Duyệt khối, xem chi tiết, giả mạo/vá chuỗi và xác minh toàn bộ chuỗi.</p>
+            <p style={styles.subtitle}>Duyệt xem chi tiết Block Header và thông số 5 khối có độ khó khác nhau.</p>
           </div>
         </div>
       </div>
 
       {/* ACTION ROW */}
       <div style={styles.actionRow}>
-        <form onSubmit={handleAddBlock} style={styles.addBlockForm}>
-          <span style={styles.formTitle}>➕ Thêm giao dịch:</span>
-          <input
-            placeholder="Người gửi"
-            value={sender}
-            onChange={(e) => setSender(e.target.value)}
-            style={styles.input}
-            required
-          />
-          <input
-            placeholder="Người nhận"
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-            style={styles.input}
-            required
-          />
-          <input
-            type="number"
-            placeholder="Số lượng"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            style={{ ...styles.input, width: '90px' }}
-            required
-          />
-          <button type="submit" style={styles.btnAdd}>
-            ⛏️ Đào & Thêm khối
-          </button>
-        </form>
-
+        <div></div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button style={styles.btnReset} onClick={handleResetChain}>
             🔄 Đặt lại (Reset)
@@ -195,7 +90,6 @@ export default function BlockHeaderViewer() {
             {blocks.map((block, idx) => {
               const isSelected = selectedIndex === idx;
               const isBlockValid = validityStatusList[idx];
-              const isFirstBrokenBlock = idx === firstBrokenIdx;
 
               return (
                 <div
@@ -225,44 +119,13 @@ export default function BlockHeaderViewer() {
                   </div>
 
                   <div style={styles.truncateHash}>
-                    {block.hash.substring(0, 38)}...
+                    {block.hash ? `${block.hash.substring(0, 38)}...` : ''}
                   </div>
 
                   <div style={styles.blockMetaInfo}>
                     <span>Nonce: {block.nonce}</span>
-                    <span>Diff: {block.difficulty}</span>
+                    <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>Diff: {block.difficulty}</span>
                     <span>Txs: {block.transactions?.length || 0}</span>
-                  </div>
-
-                  {/* NÚT THAO TÁC CÓ BẢO VỆ CHUỖI KHỎI VÁ SAI VỊ TRÍ */}
-                  <div style={{ marginTop: '10px', display: 'flex', gap: '8px' }}>
-                    {idx === 0 ? (
-                      <span style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic' }}>
-                        🔒 Block Genesis cố định
-                      </span>
-                    ) : isBlockValid ? (
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleTamperBlock(idx); }}
-                        style={styles.btnTamper}
-                      >
-                        ⚠️ Sửa dữ liệu (Giả mạo)
-                      </button>
-                    ) : isFirstBrokenBlock ? (
-                      /* CHỈ CHO PHÉP VÁ NẾU ĐÂY LÀ KHỐI NGUỒN PHÁT SINH LỖI */
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleFixBlock(idx); }}
-                        style={styles.btnFix}
-                      >
-                        🔧 Vá nguồn lỗi (Khôi phục Block #{idx})
-                      </button>
-                    ) : (
-                      /* CÁC KHỐI ĐẮNG SAU BỊ ẢNH HƯỞNG DÂY CHUYỀN */
-                      <span style={{ fontSize: '11px', color: '#ef4444', fontStyle: 'italic' }}>
-                        ⚠️ Cần vá từ Block #{firstBrokenIdx} trước
-                      </span>
-                    )}
                   </div>
                 </div>
               );
@@ -310,7 +173,9 @@ export default function BlockHeaderViewer() {
 
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Difficulty</label>
-              <div style={styles.valueBox}>{selectedBlock.difficulty}</div>
+              <div style={{ ...styles.valueBox, color: '#f59e0b', fontWeight: 'bold' }}>
+                {selectedBlock.difficulty}
+              </div>
             </div>
 
             <div style={styles.fieldGroup}>
@@ -336,7 +201,7 @@ export default function BlockHeaderViewer() {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Giao dịch (Body)</label>
+              <label style={styles.label}>Merkle Root (Transaction Body)</label>
               <div style={{ ...styles.valueBox, fontFamily: 'monospace', fontSize: '12px' }}>
                 {txBodyHash}
               </div>
@@ -352,9 +217,7 @@ export default function BlockHeaderViewer() {
                   borderColor: selectedBlockValid ? '#047857' : '#b91c1c'
                 }}
               >
-                {selectedBlockValid
-                  ? '✓ Hash khớp'
-                  : `✖ Hash không khớp (Bị ảnh hưởng do lỗi từ Block #${firstBrokenIdx})`}
+                {selectedBlockValid ? '✓ Hash và liên kết hợp lệ' : '✖ Khối không hợp lệ'}
               </div>
             )}
 
@@ -408,39 +271,6 @@ const styles = {
     gap: '16px',
     flexWrap: 'wrap'
   },
-  addBlockForm: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    backgroundColor: '#0b0f19',
-    border: '1px solid #1e293b',
-    padding: '10px 16px',
-    borderRadius: '8px'
-  },
-  formTitle: {
-    fontSize: '13px',
-    fontWeight: '600',
-    color: '#9ca3af'
-  },
-  input: {
-    backgroundColor: '#111827',
-    border: '1px solid #1f2937',
-    color: '#e5e7eb',
-    padding: '6px 10px',
-    borderRadius: '6px',
-    fontSize: '13px',
-    outline: 'none'
-  },
-  btnAdd: {
-    backgroundColor: '#d97706',
-    color: '#ffffff',
-    border: 'none',
-    padding: '6px 14px',
-    borderRadius: '6px',
-    fontWeight: '600',
-    fontSize: '13px',
-    cursor: 'pointer'
-  },
   btnReset: {
     backgroundColor: '#374151',
     color: '#ffffff',
@@ -463,26 +293,6 @@ const styles = {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px'
-  },
-  btnTamper: {
-    backgroundColor: '#991b1b',
-    color: '#ffffff',
-    border: 'none',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  btnFix: {
-    backgroundColor: '#d97706',
-    color: '#ffffff',
-    border: 'none',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontWeight: '600',
-    cursor: 'pointer'
   },
   grid: {
     display: 'grid',
