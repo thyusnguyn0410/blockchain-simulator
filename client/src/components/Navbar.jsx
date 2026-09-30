@@ -2,12 +2,7 @@ function Navbar({ onMenuClick }) {
   return (
     <header className="navbar">
       <div className="navbar-left">
-        <button
-          type="button"
-          className="mobile-menu-button"
-          onClick={onMenuClick}
-          aria-label="Open navigation"
-        >
+        <button type="button" className="mobile-menu-button" onClick={onMenuClick} aria-label="Open navigation">
           ☰
         </button>
         <div className="brand">
@@ -24,7 +19,7 @@ function Navbar({ onMenuClick }) {
           <span>Network Online</span>
         </div>
         <div className="navbar-divider" />
-        <button type="button" className="profile-button">
+        <button type="button" className="profile-button" aria-label="Open profile menu">
           <span className="profile-avatar">A</span>
           <span className="profile-name">Admin</span>
           <span className="profile-arrow">⌄</span>
