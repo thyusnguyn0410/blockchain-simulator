@@ -1,97 +1,125 @@
 import crypto from 'crypto';
-import readline from 'readline';
 
-const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
+/**
+ * Hàm băm SHA-256 chuẩn
+ */
+export const sha256 = (data) => {
+  const content = typeof data === 'string' ? data : JSON.stringify(data);
+  return crypto.createHash('sha256').update(content).digest('hex');
+};
 
-// 1. FULL NODE: Lưu Block, tính Root & Tạo Proof (Tự động tra cứu Index theo TxData)
-class FullNode {
-  constructor(txs) {
-    this.txs = txs;
-    this.merkleRoot = this.buildRoot(txs.map(sha256));
+/**
+ * Xây dựng các tầng Merkle Tree từ danh sách giao dịch
+ * Quy tắc: Nếu số nút lẻ ở một tầng, nhân bản nút cuối cùng (theo chuẩn Bitcoin)
+ */
+export function buildLevels(transactions) {
+  if (!transactions || transactions.length === 0) {
+    return [['0'.repeat(64)]];
   }
 
-  // Tối ưu thuật toán gom tầng rút gọn bằng Array.reduce
-  buildRoot(layer) {
-    if (!layer || layer.length === 0) return null;
-    if (layer.length === 1) return layer[0];
-    if (layer.length % 2 !== 0) layer.push(layer[layer.length - 1]);
+  // Tầng 0 (Lá): Băm từng giao dịch
+  const levels = [transactions.map(sha256)];
 
-    const nextLayer = layer.reduce((acc, cur, i) => 
-      i % 2 === 0 ? [...acc, sha256(cur + layer[i + 1])] : acc, []);
-    return this.buildRoot(nextLayer);
-  }
+  while (levels.at(-1).length > 1) {
+    const previous = levels.at(-1);
+    const next = [];
 
-  // CHUẨN THỰC TẾ: Nhận TxData -> Tự tìm index -> Sinh Merkle Proof
-  generateProof(txData) {
-    let idx = this.txs.indexOf(txData);
-    if (idx === -1) return null; // Giao dịch không tồn tại trong Block
-
-    let layer = this.txs.map(sha256);
-    const proof = [];
-
-    while (layer.length > 1) {
-      if (layer.length % 2 !== 0) layer.push(layer[layer.length - 1]);
-      const siblingIdx = idx % 2 === 0 ? idx + 1 : idx - 1;
-
-      proof.push({ hash: layer[siblingIdx], isLeft: idx % 2 !== 0 });
-      idx = Math.floor(idx / 2);
-
-      layer = layer.reduce((acc, cur, i) => 
-        i % 2 === 0 ? [...acc, sha256(cur + layer[i + 1])] : acc, []);
+    for (let i = 0; i < previous.length; i += 2) {
+      const left = previous[i];
+      const right = previous[i + 1] || left; // Nhân bản nếu lẻ
+      next.push(sha256(left + right));
     }
-    return proof;
+    levels.push(next);
   }
+
+  return levels;
 }
 
-// 2. LIGHT CLIENT: Chỉ giữ Merkle Root & Xác minh bằng Proof
-class LightClient {
-  constructor(merkleRoot) { this.root = merkleRoot; }
-
-  verify(txData, proof) {
-    if (!proof) return false;
-    const computedRoot = proof.reduce((hash, p) => 
-      sha256(p.isLeft ? p.hash + hash : hash + p.hash), sha256(txData));
-    return computedRoot === this.root;
-  }
+/**
+ * Tính Merkle Root đại diện cho toàn bộ block
+ */
+export function getMerkleRoot(transactions) {
+  const levels = buildLevels(transactions);
+  return levels.at(-1)[0];
 }
 
-// 3. MÔ PHỎNG DÒNG LỆNH INTERACTIVE (CLI)
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const ask = (q) => new Promise((res) => rl.question(q, res));
+/**
+ * Sinh Merkle Proof cho một giao dịch theo chỉ số index (Độ phức tạp O(log n))
+ * Trả về mảng các sibling node kèm vị trí (L hoặc R)
+ */
+export function getMerkleProof(transactions, targetIndex) {
+  if (targetIndex < 0 || targetIndex >= transactions.length) return null;
 
-async function main() {
-  console.log('=== BLOCKCHAIN MERKLE TREE SIMULATION (COMPACT) ===\n');
+  const levels = buildLevels(transactions);
+  let currentIndex = targetIndex;
+  const proof = [];
 
-  const input = await ask('1. Nhập danh sách giao dịch (cách nhau bởi dấu phẩy):\n> ');
-  const txList = input.split(',').map(s => s.trim()).filter(Boolean);
-  if (!txList.length) return rl.close();
+  // Duyệt từ tầng lá lên sát đỉnh Root
+  for (let levelIndex = 0; levelIndex < levels.length - 1; levelIndex++) {
+    const currentLevel = levels[levelIndex];
+    const isEven = currentIndex % 2 === 0;
+    const siblingIndex = isEven ? currentIndex + 1 : currentIndex - 1;
 
-  const fullNode = new FullNode(txList);
-  const lightClient = new LightClient(fullNode.merkleRoot);
+    // Lấy hash của sibling (nếu nút cuối lẻ thì lấy chính nó)
+    const siblingHash = currentLevel[siblingIndex] || currentLevel[currentIndex];
 
-  console.log(`\n[Full Node] Block Merkle Root: ${fullNode.merkleRoot}`);
-  console.log(`[Light Client] Đã đồng bộ Merkle Root thành công.`);
+    proof.push({
+      hash: siblingHash,
+      side: isEven ? 'R' : 'L', // Sibling nằm bên phải hay bên trái
+    });
 
-  while (true) {
-    const searchTx = await ask('\n2. Nhập NỘI DUNG/TXID giao dịch bạn muốn xin Proof từ Full Node:\n> ');
-    const proof = fullNode.generateProof(searchTx);
+    currentIndex = Math.floor(currentIndex / 2);
+  }
 
-    if (!proof) {
-      console.log(`[Full Node]: Giao dịch "${searchTx}" không tồn tại trong Block!`);
+  return proof;
+}
+
+/**
+ * Xác minh giao dịch có nằm trong Merkle Root hay không (Dành cho SPV / Light Client)
+ */
+export function verifyMerkleProof(transaction, proof, expectedRoot) {
+  if (!proof || !expectedRoot) return false;
+
+  let currentHash = sha256(transaction);
+
+  for (const step of proof) {
+    if (step.side === 'L') {
+      currentHash = sha256(step.hash + currentHash);
     } else {
-      console.log(` [Full Node]: Đã tìm thấy & sinh Merkle Proof (${proof.length} nút hash).`);
-
-      const testTx = await ask('3. Nhập dữ liệu giao dịch gửi đến Light Client để xác minh:\n> ');
-      const isValid = lightClient.verify(testTx, proof);
-
-      console.log(isValid 
-        ? '  XÁC MINH THÀNH CÔNG (true): Giao dịch hợp lệ!' 
-        : 'XÁC MINH THẤT BẠI (false): Dữ liệu sai lệch hoặc giả mạo!');
+      currentHash = sha256(currentHash + step.hash);
     }
-
-    if ((await ask('\nThử tiếp? (y/n): ')).toLowerCase() !== 'y') break;
   }
-  rl.close();
+
+  return currentHash === expectedRoot;
 }
 
-main();
+/**
+ * Lớp FullNode mô phỏng node đầy đủ
+ */
+export class FullNode {
+  constructor(transactions = []) {
+    this.transactions = [...transactions];
+  }
+
+  getRoot() {
+    return getMerkleRoot(this.transactions);
+  }
+
+  getProof(tx) {
+    const idx = this.transactions.indexOf(tx);
+    return idx !== -1 ? getMerkleProof(this.transactions, idx) : null;
+  }
+}
+
+/**
+ * Lớp LightClient mô phỏng ví nhẹ (SPV) chỉ lưu Root
+ */
+export class LightClient {
+  constructor(merkleRoot) {
+    this.merkleRoot = merkleRoot;
+  }
+
+  verify(tx, proof) {
+    return verifyMerkleProof(tx, proof, this.merkleRoot);
+  }
+}
