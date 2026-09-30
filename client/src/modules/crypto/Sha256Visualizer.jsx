@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { calculateSHA256, formatHashFormatted, checkAvalancheEffect, bruteforceHash } from '../../SHA-256.js';
+import { calculateSHA256, formatHashFormatted, checkAvalancheEffect, bruteforceHash } from './SHA-256.js';
 
 export default function Sha256Visualizer() {
   // 1. STATE LƯU TRỮ DỮ LIỆU INPUT

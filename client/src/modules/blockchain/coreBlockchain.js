@@ -1,41 +1,42 @@
-// Import các hàm từ phân hệ crypto (SHA-256 và Cây Merkle)
-import { sha256 } from 'client/src/cryto/SHA-256.js'; 
-import { getMerkleRoot } from 'client/src/crypto/MerkleTree.jsx';   
+// Import các hàm mã hóa/băm từ các thư mục mô-đun liên quan
+import { calculateSHA256 as sha256 } from "../crypto/SHA-256.js";
+import { getMerkleRoot } from "../crypto/MerkleTree.js";
+import { mineBlock } from "./pow.js";
 
-// Chuỗi 64 số 0 dùng làm giá trị khởi tạo cho khối Genesis (khối đầu tiên)
+// Chuỗi 64 số 0 mặc định (64 ký tự hex) dùng cho prevHash của khối Genesis
 const ZERO_HASH = new Array(65).join('0');
 
-
- //1. LỚP BLOCK 
+// 1. LỚP BLOCK (ĐẠI DIỆN CHO MỘT KHỐI)
 
 export class Block {    
     constructor(version, prevHash, transactions, timestamp, difficulty) {
-        this.version = version || 1;                    // Phiên bản của khối
-        this.prevHash = prevHash || ZERO_HASH;          // Mã băm của khối đứng trước
-        this.transactions = transactions || [];         // Danh sách các giao dịch trong khối
+        this.version = version || 1;                    // Phiên bản của khối (mặc định là 1)
+        this.prevHash = prevHash || ZERO_HASH;          // Hash của khối trước đó (nếu không có thì dùng ZERO_HASH)
+        this.transactions = transactions || [];         // Mảng danh sách các giao dịch chứa trong khối
         
-        // Tự động băm danh sách giao dịch bằng cây Merkle để tạo ra Merkle Root 
+        // Chuyển đổi danh sách giao dịch thành mảng các mã băm SHA-256
         let txHashes = this.transactions.map(tx => 
             typeof tx === 'string' ? tx : sha256(JSON.stringify(tx))
         );
-        this.merkleRoot = typeof getMerkleRoot === 'function' ? getMerkleRoot(txHashes) : ZERO_HASH;
+        // Tính toán Root Hash thông qua Cây Merkle từ danh sách mã băm giao dịch
+        this.merkleRoot = getMerkleRoot(txHashes);
 
-        this.timestamp = typeof timestamp === 'number' ? timestamp : Date.now() / 1000; // Thời gian tạo khối
-        this.difficulty = difficulty || 0;              // Độ khó của thuật toán PoW
-        this.nonce = 0;                                 // Số ngẫu nhiên dùng để thử khi đào khối
-        
-        this.next = null;                               // Con trỏ liên kết sang khối tiếp theo (Linked List)
+        // Mốc thời gian tạo khối (tính theo giây UNIX timestamp)
+        this.timestamp = typeof timestamp === 'number' ? timestamp : Date.now() / 1000;
+        this.difficulty = difficulty || 0;              // Độ khó Proof-of-Work của khối
+        this.nonce = 0;                                 // Số ngẫu nhiên dùng để thử khi khai thác/đào khối
+        this.next = null;                               // Con trỏ liên kết tới khối tiếp theo (Danh sách liên kết đơn)
 
-        this.hash = this.calculateHash();               // Mã băm chính thức của khối
+        this.hash = this.calculateHash();               // Tính toán mã băm đại diện chính thức cho khối
     }
 
-    // Hàm tính mã băm (Hash) cho Block Header
+    // Tính toán mã băm SHA-256 cho Block Header
     calculateHash() {
         const headerString = `${this.version}-${this.prevHash}-${this.merkleRoot}-${this.timestamp}-${this.difficulty}-${this.nonce}`;
         return sha256(headerString);
     }
 
-    // Hàm kiểm tra xem mã băm của khối đã thỏa mãn độ khó 
+    // Kiểm tra xem mã băm của khối hiện tại có đáp ứng tiêu chuẩn độ khó (bắt đầu bằng k số 0) hay không
     meetsDifficulty(targetDifficulty) {
         const k = targetDifficulty !== undefined ? targetDifficulty : this.difficulty;
         if (!k) return true;
@@ -43,33 +44,31 @@ export class Block {
     }
 }
 
-
-// 2. LỚP BLOCKCHAIN 
- 
+// 2. LỚP BLOCKCHAIN (QUẢN LÝ CHUỖI KHỐI)
 export class Blockchain {
     constructor(opts = {}) {
-        this.head = null;                               // Khối đầu tiên (Genesis Block)
-        this.tail = null;                               // Khối cuối cùng trong chuỗi
-        this.length = 0;                                // Tổng số khối hiện tại
-        this.difficulty = opts.difficulty || 0;         // Độ khó chung của chuỗi
+        this.head = null;                               // Khối khởi đầu chuỗi (Genesis Block)
+        this.tail = null;                               // Khối mới nhất ở cuối chuỗi
+        this.length = 0;                                // Độ dài/số lượng khối hiện tại trong chuỗi
+        this.difficulty = opts.difficulty || 0;         // Độ khó chung áp dụng cho toàn chuỗi
 
-        // Tự động khởi tạo Genesis Block nếu không bị tắt tùy chọn
+        // Tự động tạo khối Genesis khởi tạo trừ khi tùy chọn autoGenesis bị tắt (false)
         if (opts.autoGenesis !== false) {
-            this.addBlock(opts.genesisTx || [{ sender: "System", recipient: "Genesis", amount: 0 }]);
+            this.addBlock(opts.genesisTx || [{ from: "System", to: "Genesis", amount: 0 }]);
         }
     }
 
-    // Thêm một khối mới vào cuối danh sách liên kết
+    // Thêm một khối mới chứa các giao dịch vào cuối chuỗi
     addBlock(transactions) {
         const previousHash = this.tail ? this.tail.hash : ZERO_HASH;
         const newBlock = new Block(1, previousHash, transactions, undefined, this.difficulty);
 
-        // Nếu có thiết lập độ khó và hàm mineBlock tồn tại, tiến hành đào khối (P7)
-        if (this.difficulty > 0 && typeof mineBlock === 'function') {
+        // Nếu chuỗi cấu hình độ khó > 0, tiến hành đào khối bằng thuật toán PoW
+        if (this.difficulty > 0) {
             mineBlock(newBlock, this.difficulty);
         }
 
-        // Cập nhật con trỏ danh sách liên kết đơn
+        // Cập nhật cấu trúc Danh sách liên kết đơn (Linked List)
         if (this.head) {
             this.tail.next = newBlock;
             this.tail = newBlock;
@@ -81,7 +80,7 @@ export class Blockchain {
         return newBlock;
     }
 
-    // Lấy ra một khối tại vị trí chỉ định (index)
+    // Lấy đối tượng Block tại vị trí chỉ số (index) tương ứng
     at(index) {
         let current = this.head;
         let i = 0;
@@ -93,7 +92,7 @@ export class Blockchain {
         return null;
     }
 
-    // Chuyển toàn bộ danh sách liên kết thành một mảng (Array) để dễ thao tác hiển thị
+    // Chuyển đổi danh sách liên kết các khối thành một mảng (Array) chuẩn
     toArray() {
         const out = [];
         let current = this.head;
@@ -104,18 +103,20 @@ export class Blockchain {
         return out;
     }
 
-    // Kiểm tra tính toàn vẹn cơ bản của toàn bộ chuỗi khối 
+    // Kiểm tra tính hợp lệ cơ bản của toàn bộ chuỗi khối
     isChainValid() {
         let current = this.head;
         while (current) {
+            // Kiểm tra mã băm khối có bị chỉnh sửa không
             if (current.hash !== current.calculateHash()) return false;
+            // Kiểm tra liên kết con trỏ prevHash giữa các khối
             if (current.next && current.next.prevHash !== current.hash) return false;
             current = current.next;
         }
         return true;
     }
 
-    // Kiểm tra chi tiết trạng thái từng khối (
+    // Kiểm tra tính toàn vẹn chi tiết và trả về báo cáo kết quả từng khối
     validateDetailed() {
         const report = [];
         let current = this.head;
@@ -130,10 +131,10 @@ export class Blockchain {
             report.push({
                 block: current,
                 index: index,
-                dataOk: dataOk,
-                linkOk: linkOk,
-                powOk: powOk,
-                valid: dataOk && linkOk && powOk
+                dataOk: dataOk,                         // Trạng thái dữ liệu Hash
+                linkOk: linkOk,                         // Trạng thái liên kết chuỗi
+                powOk: powOk,                           // Trạng thái đạt độ khó PoW
+                valid: dataOk && linkOk && powOk        // Kết luận hợp lệ tổng thể của khối
             });
 
             prev = current;
@@ -143,7 +144,7 @@ export class Blockchain {
         return report;
     }
 
-    // Mô phỏng hành vi giả mạo/thay đổi dữ liệu bên trong một khối bất kỳ
+    // Giả lập hành vi can thiệp/sửa đổi dữ liệu giao dịch trong một khối (Tampering)
     tamper(index, newTransactions) {
         const block = this.at(index);
         if (!block) return null;
@@ -152,11 +153,12 @@ export class Blockchain {
         let txHashes = block.transactions.map(tx => 
             typeof tx === 'string' ? tx : sha256(JSON.stringify(tx))
         );
-        block.merkleRoot = typeof getMerkleRoot === 'function' ? getMerkleRoot(txHashes) : ZERO_HASH;
+        // Cập nhật lại Merkle Root sau khi sửa dữ liệu
+        block.merkleRoot = getMerkleRoot(txHashes);
         return block;
     }
 
-    // Tính toán lại chuỗi từ một vị trí bị thay đổi trở về sau
+    // Tính toán và đào lại mã băm cho các khối bắt đầu từ vị trí bị sửa đổi đến cuối chuỗi
     recomputeFrom(index) {
         const blocks = this.toArray();
         let totalAttempts = 0;
@@ -164,7 +166,7 @@ export class Blockchain {
         for (let i = Math.max(0, index); i < blocks.length; i++) {
             blocks[i].prevHash = i === 0 ? ZERO_HASH : blocks[i - 1].hash;
 
-            if (this.difficulty > 0 && typeof mineBlock === 'function') {
+            if (this.difficulty > 0) {
                 const res = mineBlock(blocks[i], this.difficulty);
                 totalAttempts += res.attempts;
             } else {
@@ -174,7 +176,7 @@ export class Blockchain {
         return totalAttempts;
     }
 
-    // Tạo bản sao (clone) của toàn bộ chuỗi khối hiện tại
+    // Tạo bản sao (Clone) độc lập của toàn bộ chuỗi khối hiện tại
     clone() {
         const copy = new Blockchain({ autoGenesis: false, difficulty: this.difficulty });
         this.toArray().forEach(b => {

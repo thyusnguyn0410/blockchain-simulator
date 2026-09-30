@@ -1,4 +1,10 @@
 import MainLayout from "./layouts/MainLayout";
+import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
+import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
+import MempoolManager from "./modules/blockchain/MempoolManager";
+import { useWebSocket } from "./hooks/useWebSocket";
+import { usePolling } from "./hooks/usePolling";
+import "./App.css";
 import "./App.css";
 
 const statCards = [
@@ -108,7 +114,10 @@ function NetworkActivity() {
   );
 }
 
-function NetworkStatus() {
+function NetworkStatus({ nodeStatus, activeUrl, loading, error }) {
+  // Kiểm tra trạng thái mạng dựa trên dữ liệu nodeStatus
+  const isOnline = nodeStatus?.status === "online";
+
   return (
     <section className="dashboard-panel">
       <div className="panel-heading">
@@ -120,7 +129,10 @@ function NetworkStatus() {
       <div className="status-list">
         <div className="status-row">
           <span>Network Health</span>
-          <strong className="status-success"><i />Excellent</strong>
+          <strong className={isOnline ? "status-success" : "status-cyan"}> // Hiển thị trạng thái mạng
+            <i />
+            {loading ? "Đang kiểm tra..." : isOnline ? "Đang hoạt động" : "Chưa xác định"} // Hiển thị trạng thái mạng dựa trên dữ liệu nodeStatus
+          </strong>
         </div>
         <div className="status-row">
           <span>Block Time</span>
@@ -128,12 +140,24 @@ function NetworkStatus() {
         </div>
         <div className="status-row">
           <span>Connected Nodes</span>
-          <strong>24 / 24</strong>
+          <strong>
+            {nodeStatus?.peers ?? 0} kết nối // Hiển thị số lượng node kết nối dựa trên dữ liệu nodeStatus
+          </strong>
         </div>
         <div className="status-row">
-          <span>Sync Status</span>
-          <strong className="status-cyan"><i />Fully Synced</strong>
+          <span>Node đang sử dụng</span> // Hiển thị URL node đang hoạt động
+          <strong className="status-cyan">
+            <i />
+            {activeUrl || "Chưa kết nối"} // Hiển thị URL node đang hoạt động hoặc thông báo nếu chưa kết nối
+          </strong>
         </div>
+
+        {error && (
+          <div className="status-row">
+            <span>Lỗi kết nối</span>
+            <strong className="status-cyan">{error.message}</strong>
+          </div>
+        )} // Hiển thị thông báo lỗi nếu có lỗi kết nối
       </div>
     </section>
   );
@@ -182,6 +206,15 @@ function RecentTransactions() {
 }
 
 function App() {
+  // KẾT NÔI VỚI WEBSOCKET BLOCKCHAIN
+  useWebSocket();
+  const {
+    data: nodeStatus,
+    activeUrl,
+    loading,
+    error,
+  } = usePolling(); // Sử dụng hook usePolling để lấy trạng thái node từ các URL API
+
   return (
     <MainLayout>
       <div className="dashboard">
@@ -193,12 +226,58 @@ function App() {
           </div>
           <button type="button" className="primary-button">+ New Simulation</button>
         </header>
+
+        / SHA-256 VISUALIZER /
+        <section className="crypto-panel-wrap">
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>SHA-256 Visualizer</h2>
+                <p>Visualize the cryptographic hashing process</p>
+              </div>
+            </div>
+
+            <Sha256Visualizer />
+          </div>
+        </section>
+
+        / BLOCK HEADER VIEWER /
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Block Header Viewer</h2>
+                <p>Inspect block metadata, hash links, and Merkle tree root</p>
+              </div>
+            </div>
+
+            <BlockHeaderViewer />
+          </div>
+        </section>
+        //MEMPOOL MANAGER 
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Mempool Manager</h2>
+                <p>Manage pending transactions before mining them into a block</p>
+              </div>
+            </div>
+
+            <MempoolManager />
+          </div>
+        </section>
         <section className="stats-grid">
           {statCards.map((card) => <StatCard key={card.title} {...card} />)}
         </section>
         <section className="dashboard-grid">
           <NetworkActivity />
-          <NetworkStatus />
+          <NetworkStatus
+            nodeStatus={nodeStatus}
+            activeUrl={activeUrl}
+            loading={loading}
+            error={error} // Hiển thị thông tin trạng thái mạng dựa trên dữ liệu nodeStatus, activeUrl, loading và error
+          />
         </section>
         <RecentTransactions />
       </div>
