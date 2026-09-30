@@ -27,10 +27,7 @@ export class Block {
 
     // Tính lại Merkle Root từ transaction hiện tại
     calculateMerkleRoot() {
-        const txHashes = this.transactions.map(tx =>
-            typeof tx === 'string' ? tx : sha256(JSON.stringify(tx))
-        );
-        return getMerkleRoot(txHashes);
+            return getMerkleRoot(this.transactions);
     }
 
     // Đồng bộ Merkle Root với transaction hiện tại
