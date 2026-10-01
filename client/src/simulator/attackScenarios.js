@@ -78,8 +78,13 @@ export function simulateDoubleSpending(privateKey) {
   
   console.log("Chữ ký Tx1 hợp lệ:", valid1);
   console.log("Chữ ký Tx2 hợp lệ:", valid2);
-  console.log("Cả 2 giao dịch đều có chữ ký hợp lệ!");
-  console.log("Hệ thống cần kiểm tra nonce và số dư để ngăn chặn Double Spending.");
+  
+  if (valid1 && valid2) {
+    console.log("CẢNH BÁO: Cả 2 giao dịch đều có chữ ký hợp lệ!");
+    console.log("Hệ thống cần kiểm tra nonce và số dư để ngăn chặn Double Spending.");
+  } else {
+    console.log("Hệ thống đã phát hiện bất thường trong chữ ký.");
+  }
 }
 
 // 4. Kịch bản mô phỏng Fork (Chain Reorganization)
