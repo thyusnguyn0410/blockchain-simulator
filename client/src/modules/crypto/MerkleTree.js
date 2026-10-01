@@ -1,11 +1,11 @@
-import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
 
 /**
- * Hàm băm SHA-256 chuẩn
+ * Hàm băm SHA-256 sử dụng thư viện crypto-js 
  */
 export const sha256 = (data) => {
   const content = typeof data === 'string' ? data : JSON.stringify(data);
-  return crypto.createHash('sha256').update(content).digest('hex');
+  return CryptoJS.SHA256(content).toString(CryptoJS.enc.Hex);
 };
 
 /**

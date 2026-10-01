@@ -4,6 +4,7 @@ import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
 import MempoolManager from "./modules/blockchain/MempoolManager";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
+import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
 import "./App.css";
 import "./App.css";
 
@@ -265,6 +266,19 @@ function App() {
             </div>
 
             <MempoolManager />
+          </div>
+        </section>
+        // PROOF OF WORK SIMULATOR 
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Proof of Work Simulator</h2>
+                <p>Simulate mining blocks and difficulty adjustment in Proof of Work consensus</p>
+              </div>
+            </div>
+
+            <ProofOfWorkSimulator />
           </div>
         </section>
         <section className="stats-grid">

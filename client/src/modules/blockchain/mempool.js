@@ -1,4 +1,4 @@
-import { verifySignature as verifyECDSASignature, isValidPublicKey } from '../crypto/ECDSA.js';
+import { verifySignature as verifyECDSASignature, isValidPublicKey, canonical } from '../crypto/ECDSA.js';
 import { calculateSHA256 as sha256 } from '../crypto/SHA-256.js';
 
 export class Mempool {
@@ -36,10 +36,17 @@ export class Mempool {
 
     // Tạo hash cố định cho transaction
     getTransactionHash(tx) {
-        const rawData =
-            `${tx.from}:${tx.to}:${tx.amount}:${tx.nonce}`;
+        const pureTx = { 
+        from: tx.from,
+        to: tx.to,
+        amount: tx.amount,
+        fee: tx.fee,
+        nonce: tx.nonce,
+        publicKey: tx.publicKey,
+        note: tx.note || ''
+    };
 
-        return sha256(rawData);
+        return sha256(canonical(pureTx));
     }
 
     // Kiểm tra chữ ký ECDSA
@@ -81,11 +88,11 @@ export class Mempool {
         // đang chờ trong Mempool
         for (const pending of this.transactions) {
             if (pending.from === tx.from) {
-                currentBalance -= pending.amount;
+                currentBalance -= (pending.amount + (pending.fee || 0));
             }
         }
 
-        return currentBalance >= tx.amount;
+        return currentBalance >= (tx.amount + (tx.fee || 0));
     }
 
     // Kiểm tra Replay Attack
