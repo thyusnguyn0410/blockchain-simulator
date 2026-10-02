@@ -89,7 +89,9 @@ const createInitialBlockchain = (myWallet, otherWallets) => {
   return bc;
 };
 
-export default function MempoolManager() {
+export default function MempoolManager({ apiUrl }) {
+  // Nếu polling chưa nhận được node, dùng Node khác làm đường dự phòng.
+  const backendUrl = apiUrl || 'http://localhost:3002' || 'http://localhost:3003';
   const createMyWallet = () => {
     const kp = generateKeyPair();
     return {
@@ -129,6 +131,11 @@ export default function MempoolManager() {
   const [mempoolList, setMempoolList] = useState([]);
   const [accountNonces, setAccountNonces] = useState({});
 
+  // Để đồng bộ số nonce của các địa chỉ ví từ blockchain hiện tại
+  const [serverWalletReady, setServerWalletReady] = useState(false); // Để xác định ví đã được cấp coin demo trên node hay chưa, tránh cấp lại nhiều lần.
+  const [serverWalletUrl, setServerWalletUrl] = useState(''); // Để xác định ví đã được cấp coin demo trên node nào, tránh cấp lại nhiều lần nếu đổi node.
+  const [serverError, setServerError] = useState(''); // Để hiển thị lỗi từ node khi gửi transaction hoặc mine block, ví dụ node từ chối transaction hoặc không thể mine block.
+
   // Tab chuyển đổi (send / receive)
   const [activeTab, setActiveTab] = useState('send');
 
@@ -166,6 +173,10 @@ export default function MempoolManager() {
     setChainState(newBc.toArray());
     setMempoolList([]);
     setLastSignatureDetails(null);
+    // Reset trạng thái ví trên node để cấp coin demo lại nếu cần.
+    setServerWalletReady(false);
+    setServerWalletUrl('');
+    setServerError('');
   };
 
   const calculateBalance = (targetAddr) => {
@@ -218,8 +229,9 @@ export default function MempoolManager() {
     }, 0);
   }, [chainState]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     setErrorMessage('');
+    setServerError(''); // Reset lỗi từ node trước khi gửi transaction mới.
 
     if (!numAmount || numAmount <= 0) {
       setErrorMessage('Vui lòng nhập số tiền hợp lệ!');
@@ -246,6 +258,18 @@ export default function MempoolManager() {
     const txHash = calculateSHA256(canonical(txData));
     const signatureHex = signMessage(me.privateKey, txHash);
 
+    // Backend dùng 4 trường cốt lõi, nên tạo thêm chữ ký riêng cho request server.
+    const serverSignedBody = {
+      from: txData.from,
+      to: txData.to,
+      amount: txData.amount,
+      nonce: txData.nonce,
+    };
+    const serverSignature = signMessage(
+      me.privateKey,
+      canonical(serverSignedBody),
+    );
+
     const rVal = calculateSHA256(txHash + me.privateKey).slice(0, 64);
     const sVal = signatureHex ? signatureHex.slice(10, 74) : '0'.repeat(64);
     const kVal = calculateSHA256(me.privateKey + txHash + Date.now()).slice(0, 64);
@@ -271,12 +295,44 @@ export default function MempoolManager() {
       setAccountNonces((prev) => ({ ...prev, [me.addr]: currentNonce + 1 }));
       setAmount('');
       setNote('');
+
+      // Ví mới tạo trong trình duyệt chưa có tiền trên node, cấp coin demo một lần.
+      if (!serverWalletReady || serverWalletUrl !== backendUrl) {
+        const faucetResponse = await fetch(`${backendUrl}/faucet`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: me.addr, amount: 100 }),
+        });
+        if (!faucetResponse.ok) {
+          throw new Error('Không thể cấp coin demo cho ví trên node.');
+        }
+
+        const fundingMineResponse = await fetch(`${backendUrl}/mine`, { method: 'POST' });
+        if (!fundingMineResponse.ok) {
+          throw new Error('Không thể xác nhận coin demo trên node.');
+        }
+        setServerWalletReady(true);
+        setServerWalletUrl(backendUrl);
+      }
+
+      // Gửi transaction đã ký vào mempool thật của backend.
+      const transactionResponse = await fetch(`${backendUrl}/transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Chỉ thay chữ ký khi gửi server; txData và chữ ký local vẫn giữ nguyên.
+        body: JSON.stringify({ ...fullTx, signature: serverSignature }),
+      });
+      if (!transactionResponse.ok) {
+        const result = await transactionResponse.json().catch(() => ({}));
+        throw new Error(result.error || 'Node từ chối transaction.');
+      }
     } catch (err) {
       setErrorMessage(err.message || 'Lỗi khi tạo giao dịch');
+      setServerError(err.message || 'Không thể đồng bộ transaction với node.');
     }
   };
 
-  const handleMine = () => {
+  const handleMine = async () => {
     if (mempoolList.length === 0) return;
 
     const totalFees = mempoolList.reduce((s, x) => s + (x.fee || 0), 0);
@@ -311,6 +367,17 @@ export default function MempoolManager() {
     mempoolEngine.removeTransactions(mempoolList);
     setMempoolList([]);
     setChainState(blockchain.toArray());
+
+    // Mine backend để server broadcast block cho Recent Transactions.
+    try {
+      const response = await fetch(`${backendUrl}/mine`, { method: 'POST' });
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+        throw new Error(result.error || 'Không thể mine transaction trên node.');
+      }
+    } catch (error) {
+      setServerError(error.message || 'Không thể mine transaction trên node.');
+    }
   };
 
   const toggleBlock = (idx) => {
@@ -549,6 +616,7 @@ export default function MempoolManager() {
             {activeTab === 'send' && (
               <div>
                 {errorMessage && <div style={styles.errorBox}>⚠️ {errorMessage}</div>}
+                {serverError && <div style={styles.errorBox}>⚠️ Đồng bộ node: {serverError}</div>}
 
                 <div style={{ marginBottom: '14px' }}>
                   <label style={styles.label}>NGƯỜI NHẬN</label>

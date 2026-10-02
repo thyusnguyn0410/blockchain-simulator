@@ -1,3 +1,4 @@
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import MainLayout from "./layouts/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
 import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
@@ -6,69 +7,6 @@ import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
 import "./App.css";
-import "./App.css";
-
-const statCards = [
-  {
-    title: "Total Transactions",
-    value: "12,458",
-    description: "Transactions processed",
-    icon: "⇄",
-    color: "cyan",
-  },
-  {
-    title: "Active Nodes",
-    value: "24",
-    description: "Nodes currently online",
-    icon: "◎",
-    color: "green",
-  },
-  {
-    title: "Latest Block",
-    value: "#1,284",
-    description: "Mined 2 minutes ago",
-    icon: "#",
-    color: "purple",
-  },
-  {
-    title: "Network Hashrate",
-    value: "84.6 TH/s",
-    description: "Current network power",
-    icon: "⚡",
-    color: "orange",
-  },
-];
-
-const transactions = [
-  {
-    hash: "0x7a91...3f20",
-    from: "0xA12...91F",
-    to: "0xB55...D20",
-    amount: "2.45 BTC",
-    status: "Confirmed",
-  },
-  {
-    hash: "0x8b32...aa10",
-    from: "0xC89...102",
-    to: "0xD12...B99",
-    amount: "0.82 BTC",
-    status: "Confirmed",
-  },
-  {
-    hash: "0x3c44...fa72",
-    from: "0xE01...A82",
-    to: "0xF90...C14",
-    amount: "5.10 BTC",
-    status: "Pending",
-  },
-  {
-    hash: "0x9d81...cc04",
-    from: "0xA55...BD1",
-    to: "0xF33...E20",
-    amount: "1.25 BTC",
-    status: "Confirmed",
-  },
-];
 
 function StatCard({ title, value, description, icon, color }) {
   return (
@@ -83,8 +21,12 @@ function StatCard({ title, value, description, icon, color }) {
   );
 }
 
-function NetworkActivity() {
-  const chartData = [42, 68, 50, 78, 55, 88, 64, 92, 72, 100, 82, 70];
+function NetworkActivity({ blocks }) {
+  // Chỉ lấy 12 block gần nhất để biểu đồ dễ nhìn và không làm nặng giao diện.
+  const chartData = blocks.slice(-12).map((block) => ({
+    block: `#${block.index}`,
+    transactions: block.transactions?.length || 0,
+  }));
 
   return (
     <section className="dashboard-panel activity-panel">
@@ -93,31 +35,25 @@ function NetworkActivity() {
           <h2>Network Activity</h2>
           <p>Transaction activity over the last 7 days</p>
         </div>
-        <select className="period-select" defaultValue="7" aria-label="Activity period">
-          <option value="7">Last 7 days</option>
-          <option value="30">Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
       </div>
-      <div className="chart" aria-label="Network activity chart">
-        {chartData.map((height, index) => (
-          <div className="chart-column" key={`${height}-${index}`}>
-            <div
-              className="chart-bar"
-              style={{ height: `${height}%` }}
-              title={`${height} transactions`}
-            />
-            <span>{index + 1}</span>
-          </div>
-        ))}
+      <div className="recharts-wrapper">
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,.15)" />
+            <XAxis dataKey="block" stroke="#94a3b8" />
+            <YAxis allowDecimals={false} stroke="#94a3b8" />
+            <Tooltip />
+            <Bar dataKey="transactions" name="Giao dịch" fill="#22d3ee" radius={[5, 5, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </section>
   );
 }
 
-function NetworkStatus({ nodeStatus, activeUrl, loading, error }) {
+function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection, mempoolSize }) {
   // Kiểm tra trạng thái mạng dựa trên dữ liệu nodeStatus
-  const isOnline = nodeStatus?.status === "online";
+  const isOnline = nodeStatus?.status === "online" && connection === "connected";
 
   return (
     <section className="dashboard-panel">
@@ -130,9 +66,10 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error }) {
       <div className="status-list">
         <div className="status-row">
           <span>Network Health</span>
-          <strong className={isOnline ? "status-success" : "status-cyan"}> // Hiển thị trạng thái mạng
+           {/* Hiển thị trạng thái mạng*/}
+          <strong className={isOnline ? "status-success" : "status-cyan"}> 
             <i />
-            {loading ? "Đang kiểm tra..." : isOnline ? "Đang hoạt động" : "Chưa xác định"} // Hiển thị trạng thái mạng dựa trên dữ liệu nodeStatus
+            {loading ? "Đang kiểm tra..." : isOnline ? "Đang hoạt động" : "Mất kết nối"}
           </strong>
         </div>
         <div className="status-row">
@@ -142,14 +79,16 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error }) {
         <div className="status-row">
           <span>Connected Nodes</span>
           <strong>
-            {nodeStatus?.peers ?? 0} kết nối // Hiển thị số lượng node kết nối dựa trên dữ liệu nodeStatus
+            {nodeStatus?.peers ?? 0} kết nối
           </strong>
         </div>
+        <div className="status-row"><span>Mempool</span><strong>{mempoolSize} giao dịch</strong></div>
         <div className="status-row">
-          <span>Node đang sử dụng</span> // Hiển thị URL node đang hoạt động
+           {/*Hiển thị URL node đang hoạt động*/}
+          <span>Active Node</span> 
           <strong className="status-cyan">
             <i />
-            {activeUrl || "Chưa kết nối"} // Hiển thị URL node đang hoạt động hoặc thông báo nếu chưa kết nối
+            {activeUrl || "Chưa kết nối"} {/* Hiển thị URL node đang hoạt động hoặc thông báo nếu chưa kết nối*/}
           </strong>
         </div>
 
@@ -158,13 +97,40 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error }) {
             <span>Lỗi kết nối</span>
             <strong className="status-cyan">{error.message}</strong>
           </div>
-        )} // Hiển thị thông báo lỗi nếu có lỗi kết nối
+        )}{/*  Hiển thị thông báo lỗi nếu có lỗi kết nối*/}
       </div>
     </section>
   );
 }
 
-function RecentTransactions() {
+function RecentTransactions({ blocks, mempool }) {
+  // Transaction trong mempool chưa được mine nên có trạng thái Pending.
+  const pendingTransactions = mempool
+    .filter((transaction) => (
+      transaction?.from &&
+      transaction?.to &&
+      (transaction.id || transaction.txid)
+    ))
+    .map((transaction) => ({
+      ...transaction,
+      status: "Pending",
+    }));
+  // Transaction đã nằm trong block được xem là Confirmed.
+  const confirmedTransactions = blocks
+    .flatMap((block) => block.transactions || [])
+    // Bỏ Genesis, Faucet và các dữ liệu hệ thống vì không phải giao dịch người dùng.
+    .filter((transaction) => (
+      transaction?.from &&
+      transaction?.to &&
+      transaction?.amount !== undefined &&
+      (transaction.id || transaction.txid) &&
+      !transaction.type?.includes("FAUCET") &&
+      transaction.type !== "Coinbase"
+    ))
+    .map((transaction) => ({ ...transaction, status: "Confirmed" }));
+  // Đặt Pending trước để giao dịch mới luôn nằm ở đầu bảng.
+  const transactions = [...pendingTransactions, ...confirmedTransactions]
+    .slice(0, 6);
   return (
     <section className="dashboard-panel transactions-panel">
       <div className="panel-heading">
@@ -186,14 +152,17 @@ function RecentTransactions() {
             </tr>
           </thead>
           <tbody>
-            {transactions.map((transaction) => (
-              <tr key={transaction.hash}>
-                <td className="hash">{transaction.hash}</td>
-                <td className="address">{transaction.from}</td>
-                <td className="address">{transaction.to}</td>
+            {/* Bảng cập nhật real-time: Pending ở mempool, Confirmed ở trong block. */}
+            {transactions.map((transaction, index) => (
+              <tr key={transaction.id || transaction.txid || index}>
+                <td className="hash">
+                  {(transaction.id || transaction.txid).slice(0, 14)}
+                </td>
+                <td className="address">{transaction.from.slice(0, 14)}</td>
+                <td className="address">{transaction.to.slice(0, 14)}</td>
                 <td>{transaction.amount}</td>
                 <td>
-                  <span className={`transaction-status ${transaction.status === "Confirmed" ? "confirmed" : "pending"}`}>
+                  <span className={`transaction-status ${transaction.status.toLowerCase()}`}>
                     {transaction.status}
                   </span>
                 </td>
@@ -207,14 +176,37 @@ function RecentTransactions() {
 }
 
 function App() {
-  // KẾT NÔI VỚI WEBSOCKET BLOCKCHAIN
-  useWebSocket();
   const {
     data: nodeStatus,
     activeUrl,
     loading,
     error,
+    onlineNodeCount,
   } = usePolling(); // Sử dụng hook usePolling để lấy trạng thái node từ các URL API
+  // Dùng cùng node với REST polling để tránh gửi transaction tới node này
+  // nhưng lại nghe block mới ở một node khác đang bị lỗi.
+  const activeWsUrl = activeUrl
+    ? activeUrl.replace(/^http/, "ws").replace(/:(\d+)$/, (_, port) => `:${Number(port) + 3000}`)
+    : undefined;
+  const realtime = useWebSocket(activeWsUrl);
+  // REST polling bổ sung node status; WebSocket là nguồn dữ liệu chính cho chain.
+  const blocks = realtime.blocks;
+  const liveStatus = nodeStatus || {
+    height: realtime.latestBlock?.index || 0,
+    peers: realtime.peers.length,
+    status: "online",
+  };
+  // Tính lại các số liệu trên thẻ mỗi khi state real-time thay đổi.
+  const totalTransactions = blocks.reduce(
+    (total, block) => total + (block.transactions?.length || 0),
+    0,
+  );
+  const statCards = [
+    { title: "Mempool", value: realtime.mempool.length, description: "Giao dịch đang chờ đào", icon: "⇄", color: "cyan" },
+    { title: "Active Nodes", value: onlineNodeCount || 0, description: "Node đang online", icon: "◎", color: "green" },
+    { title: "Block Height", value: `#${liveStatus.height ?? 0}`, description: "Chiều cao chain hiện tại", icon: "#", color: "purple" },
+    { title: "Transactions", value: totalTransactions, description: "Giao dịch đã nhận", icon: "⚡", color: "orange" },
+  ];
 
   return (
     <MainLayout>
@@ -225,10 +217,12 @@ function App() {
             <h1>Blockchain Dashboard</h1>
             <p>Monitor your blockchain network and explore its current activity.</p>
           </div>
-          <button type="button" className="primary-button">+ New Simulation</button>
+          <span className={`connection-badge ${realtime.connection}`}>
+            ● {realtime.connection === "connected" ? "WebSocket đang kết nối" : "Đang kết nối lại"}
+          </span>
         </header>
 
-        / SHA-256 VISUALIZER /
+        {/* SHA-256 VISUALIZER */}
         <section className="crypto-panel-wrap">
           <div className="dashboard-panel crypto-panel">
             <div className="panel-heading">
@@ -242,7 +236,7 @@ function App() {
           </div>
         </section>
 
-        / BLOCK HEADER VIEWER /
+        {/* BLOCK HEADER VIEWER */}
         <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
           <div className="dashboard-panel crypto-panel">
             <div className="panel-heading">
@@ -255,7 +249,7 @@ function App() {
             <BlockHeaderViewer />
           </div>
         </section>
-        //MEMPOOL MANAGER 
+         {/*MEMPOOL MANAGER */}
         <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
           <div className="dashboard-panel crypto-panel">
             <div className="panel-heading">
@@ -265,10 +259,11 @@ function App() {
               </div>
             </div>
 
-            <MempoolManager />
+            {/* Truyền node đang hoạt động để transaction dùng đúng backend có thể kết nối. */}
+            <MempoolManager apiUrl={activeUrl} />
           </div>
         </section>
-        // PROOF OF WORK SIMULATOR 
+        {/* PROOF OF WORK SIMULATOR */}
         <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
           <div className="dashboard-panel crypto-panel">
             <div className="panel-heading">
@@ -285,15 +280,17 @@ function App() {
           {statCards.map((card) => <StatCard key={card.title} {...card} />)}
         </section>
         <section className="dashboard-grid">
-          <NetworkActivity />
+          <NetworkActivity blocks={blocks} />
           <NetworkStatus
-            nodeStatus={nodeStatus}
+            nodeStatus={{ ...liveStatus, peers: onlineNodeCount || liveStatus.peers }}
             activeUrl={activeUrl}
             loading={loading}
-            error={error} // Hiển thị thông tin trạng thái mạng dựa trên dữ liệu nodeStatus, activeUrl, loading và error
+            error={error}
+            connection={realtime.connection}
+            mempoolSize={realtime.mempool.length}
           />
         </section>
-        <RecentTransactions />
+        <RecentTransactions blocks={blocks} mempool={realtime.mempool} />
       </div>
     </MainLayout>
   );

@@ -166,6 +166,12 @@ app.post('/mine', (req, res) => {
     }
     log(`Đào xong Block #${newBlock.index} trong ${newBlock.timeTakenMs} ms (${newBlock.attempts} lần thử)`);
     broadcastLatest(blockchain);
+    // Gửi state mới cho Dashboard ngay sau khi đào xong block.
+    p2pModule.broadcastEvent('state', {
+      blocks: blockchain.chain,
+      mempool: blockchain.mempool,
+      difficulty: blockchain.difficulty,
+    });
     return res.json(newBlock);
   } catch (error) {
     log(`Lỗi đào block: ${error.message}`);
@@ -179,7 +185,8 @@ app.post('/transaction', (req, res) => {
     const tx = blockchain.addToMempool(req.body);
     log(`Giao dịch ${tx.id.slice(0, 12)} đã vào mempool (${blockchain.mempool.length})`);
     broadcastTransaction(tx);
-    p2pModule.broadcast({ type: p2pModule.MessageType.EVENT, event: 'mempool', data: blockchain.mempool.length });
+    // Gửi lại toàn bộ mempool để giao diện luôn hiển thị đúng số transaction đang chờ.
+    p2pModule.broadcastEvent('mempool', blockchain.mempool);
     return res.status(201).json({ transaction: tx, mempoolSize: blockchain.mempool.length });
   } catch (error) {
     return res.status(400).json({ error: error.message });

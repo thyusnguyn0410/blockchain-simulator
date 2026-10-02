@@ -149,6 +149,10 @@ class P2PServer {
         this._handleIncomingTransaction(message.data, ws);
         break;
 
+      case MessageType.EVENT:
+        // Event state/mempool chỉ dành cho trình duyệt, node P2P không cần xử lý.
+        break;
+
       default:
         this.onLog('[P2P] Message type không xác định: ' + message.type);
     }
@@ -229,7 +233,14 @@ class P2PServer {
       return;
     }
 
-    this.blockchain.addToMempool(tx);
+    try {
+      this.blockchain.addToMempool(tx);
+    } catch (error) {
+      // Peer có thể chưa đồng bộ số dư hoặc nonce, nên từ chối giao dịch
+      // một cách an toàn thay vì làm tiến trình node bị dừng.
+      this.onLog('[P2P] Từ chối transaction từ mạng: ' + error.message);
+      return;
+    }
     this.onLog('[P2P] Nhận giao dịch mới từ mạng, đã thêm vào mempool');
 
     // Lan truyền tiếp cho các peer khác (trừ người vừa gửi) — flooding đơn giản.
@@ -251,7 +262,12 @@ class P2PServer {
   }
 
   broadcastEvent(event, data) {
-    this.broadcast({ type: MessageType.EVENT, event, data });
+    // Event của Dashboard chỉ gửi cho trình duyệt, không gửi sang node P2P.
+    this.sockets.forEach((ws) => {
+      if (ws.__isClient) {
+        this._write(ws, { type: MessageType.EVENT, event, data });
+      }
+    });
   }
 
   getPeerCount() {
@@ -339,6 +355,10 @@ function broadcastTransaction(tx) {
   if (activeServer) activeServer.broadcastTransaction(tx);
 }
 
+function broadcastEvent(event, data) {
+  if (activeServer) activeServer.broadcastEvent(event, data);
+}
+
 function getSockets() {
   return activeServer ? activeServer.sockets : [];
 }
@@ -359,6 +379,7 @@ module.exports = {
   broadcast,
   broadcastLatest,
   broadcastTransaction,
+  broadcastEvent,
   getSockets,
   getPeers,
 };
