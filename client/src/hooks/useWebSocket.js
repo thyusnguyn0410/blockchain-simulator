@@ -5,7 +5,9 @@ const DEFAULT_WS_URL = "ws://localhost:6001";
 export function useWebSocket(url = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL) {
   const socketRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+  // connection dùng để hiển thị WebSocket đang kết nối, mất kết nối hay kết nối lại.
   const [connection, setConnection] = useState("connecting");
+  // Đây là state chung của Dashboard: chain, mempool, log và các node peer.
   const [state, setState] = useState({
     nodeId: "",
     blocks: [],
@@ -41,6 +43,7 @@ export function useWebSocket(url = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL
           return;
         }
 
+        // Server gửi block mới hoặc toàn bộ chain sau khi có thay đổi.
         if (message.type === "RESPONSE_BLOCKCHAIN" && Array.isArray(message.data)) {
           setState((current) => ({
             ...current,
@@ -50,11 +53,22 @@ export function useWebSocket(url = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL
           }));
         }
 
+        // Thêm nhanh transaction mới vào danh sách chờ khi nhận message P2P.
         if (message.type === "NEW_TRANSACTION" && message.data) {
           setState((current) => ({
             ...current,
             mempool: [...current.mempool, message.data],
           }));
+        }
+
+        // Event mempool gửi toàn bộ danh sách để tránh dữ liệu trên Dashboard bị lệch.
+        if (message.type === "EVENT" && message.event === "mempool" && Array.isArray(message.data)) {
+          setState((current) => ({ ...current, mempool: message.data }));
+        }
+
+        // Event state cập nhật đồng thời blocks, mempool và difficulty sau khi mine.
+        if (message.type === "EVENT" && message.event === "state" && message.data) {
+          setState((current) => ({ ...current, ...message.data }));
         }
 
         // Snapshot là toàn bộ trạng thái hiện tại của node gửi cho client lúc bắt tay.

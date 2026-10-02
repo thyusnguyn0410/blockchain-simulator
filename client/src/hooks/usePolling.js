@@ -55,6 +55,7 @@ export function usePolling(
   const [activeUrl, setActiveUrl] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(enabled);
+  const [onlineNodeCount, setOnlineNodeCount] = useState(0); // Số lượng node đang online, dùng để hiển thị trạng thái tổng quan.
 
   /**
    * Gọi lần lượt các node cho đến khi nhận được phản hồi thành công.
@@ -100,6 +101,13 @@ export function usePolling(
         setData(nextData);
         setError(null);
         setLoading(false);
+        // Kiểm tra nhanh cả danh sách node để hiển thị tổng số node đang online.
+        Promise.allSettled(apiUrls.map(async (url) => {
+          const response = await fetch(`${url}/status`, { headers: { Accept: "application/json" } });
+          return response.ok;
+        })).then((results) => {
+          setOnlineNodeCount(results.filter((result) => result.status === "fulfilled" && result.value).length);
+        });
         if (isNewActiveUrl) {
           console.info(`[Polling] Đã kết nối thành công tới ${baseUrl}.`);
         }
@@ -160,5 +168,5 @@ export function usePolling(
    */
   const refresh = useCallback(() => poll(), [poll]);
 
-  return { data, activeUrl, error, loading: enabled && loading, refresh };
+  return { data, activeUrl, error, loading: enabled && loading, onlineNodeCount, refresh };
 }

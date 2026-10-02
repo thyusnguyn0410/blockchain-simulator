@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { calculateSHA256, formatHashFormatted, checkAvalancheEffect, bruteforceHash } from './SHA-256.js';
 
 export default function Sha256Visualizer() {
@@ -13,11 +14,11 @@ export default function Sha256Visualizer() {
   const [pow, setPow] = useState(null);
   const [mining, setMining] = useState(false);
 
-  // 2. TỰ ĐỘNG TÍNH TOÁN REALTIME KHI INPUT THAY ĐỔI
+  // Tự động tính lại hash và Avalanche Effect ngay khi người dùng đổi input.
   useEffect(() => setShaResult(calculateSHA256(shaInput)), [shaInput]);
   useEffect(() => { if (i1 && i2) setAv(checkAvalancheEffect(i1, i2)); }, [i1, i2]);
 
-  // Xử lý đào Proof of Work
+  // Chạy thử nonce cho đến khi hash có prefix đúng độ khó PoW.
   const handleMine = () => {
     setMining(true); setPow(null);
     setTimeout(() => { setPow(bruteforceHash(powData, prefix)); setMining(false); }, 50);
@@ -57,6 +58,16 @@ export default function Sha256Visualizer() {
             <HashBlock label="Hash 1" hash={av.hash1} />
             <HashBlock label="Hash 2" hash={av.hash2} />
             <p style={{ margin: '5px 0' }}>Khác biệt: <b>{av.differentBits}/256 bits</b> <span style={{ color: '#e74c3c' }}>({av.percentageChange})</span></p>
+            {/* Biểu đồ cho thấy số bit giống và khác giữa hai hash SHA-256. */}
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={[{ name: 'Giống nhau', bits: 256 - av.differentBits }, { name: 'Khác nhau', bits: av.differentBits }]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={[0, 256]} />
+                <Tooltip />
+                <Bar dataKey="bits" name="Số bit" fill="#8e44ad" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
@@ -75,6 +86,16 @@ export default function Sha256Visualizer() {
           <div style={box}>
             <p style={{ margin: '2px 0' }}>Nonce: <b style={{ color: '#d35400' }}>{pow.nonce}</b> | Thời gian: {pow.timeTakenSeconds}</p>
             <HashBlock label="Hash hợp lệ" hash={pow.hash} />
+            {/* Biểu đồ hiển thị số nonce đã thử và thời gian đào PoW. */}
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={[{ name: 'Nonce', value: pow.nonce }, { name: 'Thời gian (ms)', value: Number.parseFloat(pow.timeTakenSeconds) * 1000 }]}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" name="Giá trị" fill="#2980b9" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </div>
