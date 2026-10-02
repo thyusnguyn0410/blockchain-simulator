@@ -41,13 +41,28 @@ class P2PServer {
     this.sockets = []; // tất cả kết nối đang mở, cả inbound (server) lẫn outbound (client)
   }
 
-  /** Mở WebSocketServer để nhận kết nối từ các Node khác. */
-  listen() {
-    const server = new WebSocketServer({ port: this.p2pPort });
-    server.on('connection', (ws) => this._initConnection(ws));
-    server.on('error', (err) => this.onLog('[P2P] Server error: ' + err.message));
-    this.onLog('[P2P] Listening for peer-to-peer connections on port ' + this.p2pPort);
-    this.wss = server;
+listen() {
+    if (this.server) {
+      const server = new WebSocketServer({ noServer: true });
+
+      server.on('connection', (ws) => this._initConnection(ws));
+      server.on('error', (err) => this.onLog('[P2P] Server error: ' + err.message));
+
+      this.server.on('upgrade', (request, socket, head) => {
+        server.handleUpgrade(request, socket, head, (ws) => {
+          server.emit('connection', ws, request);
+        });
+      });
+
+      this.onLog('[P2P] WebSocket Server gắn trực tiếp vào HTTP Server (noServer upgrade)');
+      this.wss = server;
+    } else {
+      const server = new WebSocketServer({ port: this.p2pPort });
+      server.on('connection', (ws) => this._initConnection(ws));
+      server.on('error', (err) => this.onLog('[P2P] Server error: ' + err.message));
+      this.onLog('[P2P] Listening for peer-to-peer connections on port ' + this.p2pPort);
+      this.wss = server;
+    }
     return this;
   }
 
