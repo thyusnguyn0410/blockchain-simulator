@@ -230,8 +230,7 @@ if (typeof initP2PServer === 'function') {
   }
 }
 
-// Lắng nghe trên 0.0.0.0 với HTTP_PORT duy nhất
-app.listen(HTTP_PORT, '0.0.0.0', () => {
+server.listen(HTTP_PORT, '0.0.0.0', () => {
   log(`🚀 Server đã sẵn sàng tại port ${HTTP_PORT} (0.0.0.0)`);
 });
 
