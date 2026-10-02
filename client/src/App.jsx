@@ -6,10 +6,17 @@ import MempoolManager from "./modules/blockchain/MempoolManager";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
+<<<<<<< HEAD
 
 import Button from "./components/Button";
 import Card from "./components/Card";
 import DataTable from "./components/Table";
+=======
+import Button from "./components/Button";
+import Card from "./components/Card";
+import DataTable from "./components/Table";
+import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
+>>>>>>> 944b893d4ee94343dfb4870ce1b6bf8b04b323a0
 import "./App.css";
 
 const formatNumber = (value) => new Intl.NumberFormat("en-US").format(value || 0);
@@ -66,6 +73,7 @@ function ActivityChart({ logs }) {
 
 function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
   const online = nodeStatus?.status === "online";
+<<<<<<< HEAD
   return (
     <Card title="Network status" description="Connection health across the simulator">
       <div className="status-list">
@@ -93,6 +101,18 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
       </div>
     </Card>
   );
+=======
+  return <Card title="Network status" description="Connection health across the simulator">
+    <div className="status-list">
+      <div className="status-row"><span>REST API</span><strong className={online ? "status-success" : "status-warning"}><i />{loading ? "Checking…" : online ? "Online" : "Offline"}</strong></div>
+      <div className="status-row"><span>WebSocket</span><strong className={connection === "connected" ? "status-success" : "status-warning"}><i />{connection === "connected" ? "Connected" : connection === "connecting" ? "Connecting" : "Disconnected"}</strong></div>
+      <div className="status-row"><span>Connected peers</span><strong>{nodeStatus?.peers ?? 0}</strong></div>
+      <div className="status-row"><span>Difficulty</span><strong>{nodeStatus?.difficulty ?? "—"}</strong></div>
+      <div className="status-row"><span>Active node</span><strong className="status-cyan node-url" title={activeUrl || "No active node"}>{activeUrl || "No active node"}</strong></div>
+      {error && <p className="inline-error">{error.message}</p>}
+    </div>
+  </Card>;
+>>>>>>> 944b893d4ee94343dfb4870ce1b6bf8b04b323a0
 }
 
 function TransactionsPanel({ transactions }) {
@@ -103,6 +123,7 @@ function TransactionsPanel({ transactions }) {
     { key: "amount", label: "Amount", render: (row) => (row.amount === undefined ? "—" : Number(row.amount).toFixed(4)) },
     { key: "status", label: "Status", render: (row) => <span className={`status-badge ${row.status === "Pending" ? "warning" : "success"}`}>{row.status}</span> },
   ];
+<<<<<<< HEAD
 
   return (
     <Card
@@ -114,6 +135,11 @@ function TransactionsPanel({ transactions }) {
       <DataTable columns={columns} rows={transactions} emptyMessage="No transactions have been reported yet." />
     </Card>
   );
+=======
+  return <Card title="Recent transactions" description="Latest transactions observed on the network" actions={<span className="panel-count">{transactions.length} shown</span>} className="transactions-panel">
+    <DataTable columns={columns} rows={transactions} />
+  </Card>;
+>>>>>>> 944b893d4ee94343dfb4870ce1b6bf8b04b323a0
 }
 
 function App() {
@@ -137,6 +163,14 @@ function App() {
     );
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+<<<<<<< HEAD
+=======
+
+  const handleNewSimulation = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    refresh();
+  };
+>>>>>>> 944b893d4ee94343dfb4870ce1b6bf8b04b323a0
 
   const handleNewSimulation = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -155,6 +189,7 @@ function App() {
           <Button onClick={handleNewSimulation}>↻ Refresh simulation</Button>
         </header>
 
+<<<<<<< HEAD
         <section className="stats-grid" aria-label="Network metrics">
           <MetricCard label="Total transactions" value={formatNumber(totalTransactions)} detail="Confirmed + pending" icon="⇄" tone="cyan" />
           <MetricCard
@@ -224,6 +259,33 @@ function App() {
       </div>
     </MainLayout>
   );
+=======
+      <section className="dashboard-grid" id="network-status">
+        <ActivityChart logs={logs} />
+        <NetworkStatus nodeStatus={nodeStatus} activeUrl={activeUrl} loading={loading} error={error} connection={connection} />
+      </section>
+
+      <section id="transactions"><TransactionsPanel transactions={transactions} /></section>
+
+      <section id="blockchain-tools" className="tool-section">
+        <div className="section-heading">
+          <div>
+            <span className="page-label">LEARNING LAB</span>
+            <h2>Blockchain tools</h2>
+            <p>Interactive visualizations and blockchain learning simulations</p>
+          </div>
+        </div>
+
+        <div className="tool-grid">
+          <Card title="SHA-256 visualizer" description="Hashing, avalanche effect, and proof-of-work exploration" className="tool-card"><Sha256Visualizer /></Card>
+          <Card title="Block header viewer" description="Inspect, verify, and safely demonstrate chain integrity" className="tool-card"><BlockHeaderViewer /></Card>
+          <Card title="Mempool manager" description="Create signed transactions and mine them into the local chain" className="tool-card"><MempoolManager /></Card>
+          <Card title="Proof of work simulator" description="Explore mining difficulty and chain reinforcement" className="tool-card"><ProofOfWorkSimulator /></Card>
+        </div>
+      </section>
+    </div>
+  </MainLayout>;
+>>>>>>> 944b893d4ee94343dfb4870ce1b6bf8b04b323a0
 }
 
 export default App;

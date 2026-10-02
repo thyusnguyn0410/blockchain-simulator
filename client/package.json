@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "buffer": "^6.0.0",
     "crypto-js": "^4.2.0",
     "elliptic": "^6.6.1",
     "react": "^19.2.8",
