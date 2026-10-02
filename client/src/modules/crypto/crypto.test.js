@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import { test } from 'vitest';
 import {
   calculateSHA256,
   checkAvalancheEffect,
@@ -16,7 +16,7 @@ import {
   getMerkleProof,
   getMerkleRoot,
   verifyMerkleProof,
-} from '../blockchain/coreBlockchain.js';
+} from './MerkleTree.js';
 
 test('SHA-256 returns the expected 64-character hexadecimal digest', () => {
   const hash = calculateSHA256('abc');
