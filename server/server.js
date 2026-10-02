@@ -13,6 +13,7 @@ const express = require('express');
 const cors = require('cors');
 const { Blockchain } = require('./src/blockchain');
 const p2pModule = require('./src/p2p');
+const http = require('http');
 
 const {
   initP2PServer,
@@ -200,17 +201,14 @@ app.post('/transaction', (req, res) => {
   }
 });
 
-// Khởi chạy HTTP REST API - BẮT BUỘC dùng host '0.0.0.0' để chạy được trên Render/Cloud
-app.listen(HTTP_PORT, '0.0.0.0', () => {
-  log(`🚀 REST API của "${NODE_ID}" đang chạy tại port ${HTTP_PORT} (0.0.0.0)`);
-});
+// Tạo HTTP Server bọc Express
+const server = http.createServer(app);
 
-// ------------------------------ Lớp P2P ---------------------------------
-// Khởi chạy WebSocket Server với WS_PORT chính xác của Node này
+// Gắn P2P WebSocket chạy chung server HTTP
 if (typeof initP2PServer === 'function') {
   try {
     initP2PServer({
-      wsPort: WS_PORT,
+      server, // Dùng chung HTTP server thay vì mở cổng riêng
       blockchain,
       nodeId: NODE_ID,
       httpPort: HTTP_PORT,
@@ -218,7 +216,6 @@ if (typeof initP2PServer === 'function') {
       getSnapshot: () => ({
         nodeId: NODE_ID,
         httpPort: HTTP_PORT,
-        wsPort: WS_PORT,
         status: 'online',
         blocks: blockchain.chain,
         mempool: blockchain.mempool,
@@ -228,9 +225,15 @@ if (typeof initP2PServer === 'function') {
       }),
     });
   } catch (err) {
-    initP2PServer(WS_PORT, blockchain);
+    // Trường hợp dự phòng nếu initP2PServer nhận httpServer trực tiếp
+    initP2PServer(server, blockchain);
   }
 }
+
+// Lắng nghe trên 0.0.0.0 với HTTP_PORT duy nhất
+app.listen(HTTP_PORT, '0.0.0.0', () => {
+  log(`🚀 Server đã sẵn sàng tại port ${HTTP_PORT} (0.0.0.0)`);
+});
 
 if (INITIAL_PEERS.length > 0 && typeof connectToPeers === 'function') {
   log(`🔗 Đang kết nối tới peers: ${INITIAL_PEERS.join(', ')}`);
