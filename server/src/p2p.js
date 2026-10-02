@@ -293,7 +293,6 @@ class P2PServer {
   _newTransactionMsg(tx) {
     return { type: MessageType.NEW_TRANSACTION, data: tx };
   }
-}
 
 let activeServer = null;
 
