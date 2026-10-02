@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { Blockchain } from './coreBlockchain.js';
 
+// DỮ LIỆU BAN ĐẦU CHUẨN CỦA CÁC KHỐI
+const ORIGINAL_DATA = [
+  { difficulty: 0, txs: [{ from: "Genesis", to: "Alice", amount: 50, rawText: "Genesis Block" }] },
+  { difficulty: 1, txs: [{ from: "Nguyên", to: "Bảo", amount: 0.27, rawText: "Nguyên gửi 0.27 BTC cho Bảo" }] },
+  { difficulty: 2, txs: [{ from: "Bob", to: "Charlie", amount: 5.0, rawText: "Bob gửi 5.0 BTC cho Charlie" }] },
+  { difficulty: 3, txs: [{ from: "Charlie", to: "David", amount: 2.5, rawText: "Charlie gửi 2.5 BTC cho David" }] },
+  { difficulty: 4, txs: [{ from: "David", to: "Eva", amount: 1.0, rawText: "David gửi 1.0 BTC cho Eva" }] }
+];
+
 export default function BlockHeaderViewer() {
-  // Khởi tạo sẵn 5 khối có độ khó khác nhau (Diff 0, 1, 2, 3, 4)
+  // Khởi tạo chuỗi khối từ ORIGINAL_DATA
   const createInitialChain = () => {
     const chain = new Blockchain({ autoGenesis: false });
 
-    const blocksData = [
-      { difficulty: 0, txs: [{ from: "Genesis", to: "Alice", amount: 50, fee: 0, nonce: 0 }] },
-      { difficulty: 1, txs: [{ from: "Alice", to: "Bob", amount: 12.5, fee: 0.001, nonce: 1 }] },
-      { difficulty: 2, txs: [{ from: "Bob", to: "Charlie", amount: 5.0, fee: 0.002, nonce: 2 }] },
-      { difficulty: 3, txs: [{ from: "Charlie", to: "David", amount: 2.5, fee: 0.003, nonce: 3 }] },
-      { difficulty: 4, txs: [{ from: "David", to: "Eva", amount: 1.0, fee: 0.005, nonce: 4 }] }
-    ];
-
-    blocksData.forEach((item) => {
+    ORIGINAL_DATA.forEach((item) => {
       chain.difficulty = item.difficulty;
       chain.addBlock(item.txs);
     });
@@ -24,43 +25,72 @@ export default function BlockHeaderViewer() {
 
   const [blockchain, setBlockchain] = useState(createInitialChain);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [isVerified, setIsVerified] = useState(false);
 
   const blocks = blockchain.toArray();
   const selectedBlock = blocks[selectedIndex] || blocks[0];
 
+  // Báo cáo tính hợp lệ chi tiết của từng khối trong chuỗi
   const validationReport = blockchain.validateDetailed();
-  const validityStatusList = blocks.map((_, idx) =>
-    validationReport[idx]?.valid ?? false
-  );
-  const selectedBlockValid = validationReport[selectedIndex]?.valid ?? false;
+  const selectedReport = validationReport[selectedIndex] || {};
 
-  const txBodyHash = selectedBlock?.merkleRoot || '';
+  // Tính lại Hash thực tế của khối đang chọn
+  const recalculatedHash = selectedBlock ? selectedBlock.calculateHash() : '';
+  const isHashMismatched = selectedBlock && selectedBlock.hash !== recalculatedHash;
 
   const handleSelectBlock = (idx) => {
     setSelectedIndex(idx);
-    setIsVerified(false);
-  };
-
-  const handleVerifyChain = () => {
-    setIsVerified(true);
   };
 
   const handleResetChain = () => {
     setBlockchain(createInitialChain());
     setSelectedIndex(0);
-    setIsVerified(false);
+  };
+
+  // SỬA TRỘM: Kích hoạt tự động khi sửa/xóa dữ liệu trong ô input
+  const handleDataInputChange = (newStringValue) => {
+    if (!selectedBlock || selectedIndex === 0) return;
+
+    const updatedTxs = [
+      {
+        from: newStringValue,
+        to: "",
+        amount: 0,
+        rawText: newStringValue
+      }
+    ];
+
+    blockchain.tamper(selectedIndex, updatedTxs);
+    setBlockchain(blockchain.clone());
+  };
+
+  // FIX LẠI: Khôi phục về dữ liệu ban đầu và đào/tính lại Hash chuẩn
+  const handleFixBlock = () => {
+    if (selectedIndex === 0) return;
+    for (let i = selectedIndex; i < ORIGINAL_DATA.length; i++) {
+      const block = blockchain.at(i);
+      if (block) {
+      block.transactions = JSON.parse(JSON.stringify(ORIGINAL_DATA[i].txs));
+      block.refreshMerkleRoot();
+    }
+  }
+    // 3. Đào lại/Tính lại Hash cho khối này và các khối phía sau
+    blockchain.recomputeFrom(selectedIndex);
+
+    // 4. Cập nhật lại giao diện
+    setBlockchain(blockchain.clone());
   };
 
   return (
     <div style={styles.container}>
-      {/* HEADER EXPLORER */}
+      {/* HEADER */}
       <div style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={styles.searchIconBox}>🔍</div>
           <div>
             <h2 style={styles.title}>Blockchain Explorer</h2>
-            <p style={styles.subtitle}>Duyệt xem chi tiết Block Header và thông số 5 khối có độ khó khác nhau.</p>
+            <p style={styles.subtitle}>
+              Mô phỏng Blockchain với Difficulty riêng biệt. Nhập/xóa ô DỮ LIỆU để sửa trộm, bấm "Fix" để khôi phục dữ liệu ban đầu.
+            </p>
           </div>
         </div>
       </div>
@@ -68,15 +98,9 @@ export default function BlockHeaderViewer() {
       {/* ACTION ROW */}
       <div style={styles.actionRow}>
         <div></div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button style={styles.btnReset} onClick={handleResetChain}>
-            🔄 Đặt lại (Reset)
-          </button>
-
-          <button style={styles.btnVerify} onClick={handleVerifyChain}>
-            🛡️ Xác minh chuỗi
-          </button>
-        </div>
+        <button style={styles.btnReset} onClick={handleResetChain}>
+          🔄 
+        </button>
       </div>
 
       {/* GRID CONTAINER */}
@@ -89,7 +113,18 @@ export default function BlockHeaderViewer() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {blocks.map((block, idx) => {
               const isSelected = selectedIndex === idx;
-              const isBlockValid = validityStatusList[idx];
+              const report = validationReport[idx] || {};
+
+              let statusLabel = '✓ Hợp lệ';
+              let statusColor = '#10b981';
+
+              if (!report.dataOk) {
+                statusLabel = '✖ Dữ liệu đã bị sửa';
+                statusColor = '#ef4444';
+              } else if (!report.linkOk) {
+                statusLabel = '✖ Đứt mắt xích';
+                statusColor = '#f59e0b';
+              }
 
               return (
                 <div
@@ -97,25 +132,25 @@ export default function BlockHeaderViewer() {
                   onClick={() => handleSelectBlock(idx)}
                   style={{
                     ...styles.blockCard,
-                    borderColor: isSelected ? '#d97706' : isVerified ? (isBlockValid ? '#1e293b' : '#ef4444') : '#1e293b',
+                    borderColor: isSelected ? '#3b82f6' : (report.valid ? '#1e293b' : statusColor),
                     backgroundColor: isSelected ? '#121927' : '#0b1120'
                   }}
                 >
                   <div style={styles.blockCardHeader}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: '#d97706' }}>📦</span>
-                      <span style={styles.blockCardTitle}>Block #{idx}</span>
+                      <span style={{ color: '#3b82f6' }}>📦</span>
+                      <span style={styles.blockCardTitle}>
+                        {idx === 0 ? "Khối Genesis (#0)" : `Khối #${idx}`}
+                      </span>
                     </div>
 
-                    {isVerified && (
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        color: isBlockValid ? '#10b981' : '#ef4444'
-                      }}>
-                        {isBlockValid ? '✓ VALID' : '✖ INVALID'}
-                      </span>
-                    )}
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      color: statusColor
+                    }}>
+                      {statusLabel}
+                    </span>
                   </div>
 
                   <div style={styles.truncateHash}>
@@ -133,29 +168,88 @@ export default function BlockHeaderViewer() {
           </div>
         </div>
 
-        {/* CỘT PHẢI: CHI TIẾT BLOCK */}
+        {/* CỘT PHẢI: CHI TIẾT KHỐI ĐANG CHỌN */}
         {selectedBlock && (
           <div style={styles.cardPanel}>
-            <h3 style={styles.panelTitle}>Chi tiết Block #{selectedIndex}</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ ...styles.panelTitle, margin: 0 }}>
+                Chi tiết {selectedIndex === 0 ? "Khối Genesis (#0)" : `Khối #${selectedIndex}`}
+              </h3>
+              
+              {/* NÚT FIX KHÔI PHỤC DỮ LIỆU BAN ĐẦU */}
+              {selectedIndex !== 0 && (
+                <button style={styles.btnFixBtn} onClick={handleFixBlock}>
+                  🔧 Sửa lại (Fix)
+                </button>
+              )}
+            </div>
 
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Block Height</label>
               <div style={styles.valueBox}>{selectedIndex}</div>
             </div>
 
+            {/* DÒNG DỮ LIỆU: TỰ ĐỘNG SỬA TRỘM KHI NHẬP/XÓA */}
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Hash (Lưu trữ)</label>
+              <label style={{ ...styles.label, color: selectedIndex === 0 ? '#9ca3af' : '#f59e0b', fontWeight: 'bold' }}>
+                DỮ LIỆU {selectedIndex === 0 && "(Cố định - Không thể sửa)"}
+              </label>
+              <input
+                type="text"
+                disabled={selectedIndex === 0}
+                style={{
+                  ...styles.inputTextData,
+                  backgroundColor: selectedIndex === 0 ? '#1f2937' : '#111827',
+                  borderColor: selectedIndex === 0 ? '#374151' : '#d97706',
+                  cursor: selectedIndex === 0 ? 'not-allowed' : 'text',
+                  color: selectedIndex === 0 ? '#9ca3af' : '#ffffff'
+                }}
+                value={selectedBlock.transactions[0]?.rawText || ''}
+                onChange={(e) => handleDataInputChange(e.target.value)}
+                placeholder="Nhập nội dung giao dịch..."
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>THỜI GIAN</label>
+              <div style={styles.valueBox}>
+                {new Date(selectedBlock.timestamp * 1000).toLocaleString()}
+              </div>
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>PREV HASH</label>
+              <div style={{
+                ...styles.valueBox,
+                fontFamily: 'monospace',
+                color: selectedReport.linkOk ? '#e5e7eb' : '#ef4444',
+                borderColor: selectedReport.linkOk ? '#1f2937' : '#ef4444'
+              }}>
+                {selectedBlock.prevHash}
+              </div>
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>HASH (Đang lưu)</label>
               <div style={{ ...styles.valueBox, fontFamily: 'monospace' }}>
                 {selectedBlock.hash}
               </div>
             </div>
 
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Previous Hash</label>
-              <div style={{ ...styles.valueBox, fontFamily: 'monospace' }}>
-                {selectedBlock.prevHash}
+            {/* HIỂN THỊ CẢNH BÁO NẾU HASH BỊ LỆCH */}
+            {isHashMismatched && (
+              <div style={{ ...styles.fieldGroup, border: '1px solid #ef4444', padding: '10px', borderRadius: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)' }}>
+                <label style={{ ...styles.label, color: '#f87171', fontWeight: 'bold' }}>
+                  HASH TÍNH LẠI
+                </label>
+                <div style={{ ...styles.valueBox, fontFamily: 'monospace', color: '#f87171', borderColor: '#ef4444' }}>
+                  {recalculatedHash}
+                </div>
+                <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px', fontWeight: 'bold' }}>
+                  ↑ Khác với Hash đang lưu ⇒ Dữ liệu khối này đã bị sửa trộm!
+                </div>
               </div>
-            </div>
+            )}
 
             <div style={styles.fieldGroup}>
               <label style={styles.label}>Merkle Root</label>
@@ -165,14 +259,7 @@ export default function BlockHeaderViewer() {
             </div>
 
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Timestamp</label>
-              <div style={styles.valueBox}>
-                {new Date(selectedBlock.timestamp * 1000).toLocaleString()}
-              </div>
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Difficulty</label>
+              <label style={styles.label}>Difficulty (Độ khó khối)</label>
               <div style={{ ...styles.valueBox, color: '#f59e0b', fontWeight: 'bold' }}>
                 {selectedBlock.difficulty}
               </div>
@@ -193,33 +280,21 @@ export default function BlockHeaderViewer() {
               <div style={styles.valueBox}>{selectedBlock.transactions?.length || 0}</div>
             </div>
 
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Metadata</label>
-              <div style={styles.valueBox}>
-                {selectedIndex === 0 ? "Genesis Block" : `Node ${selectedIndex}`}
-              </div>
+            {/* TRẠNG THÁI HIỂN THỊ */}
+            <div
+              style={{
+                ...styles.statusBadge,
+                backgroundColor: selectedReport.valid ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                color: selectedReport.valid ? '#10b981' : '#ef4444',
+                borderColor: selectedReport.valid ? '#047857' : '#b91c1c'
+              }}
+            >
+              {selectedReport.valid
+                ? '✓ Hợp lệ'
+                : !selectedReport.dataOk
+                  ? '✖ Dữ liệu đã bị sửa'
+                  : '✖ Đứt mắt xích (Hash khối trước không khớp PrevHash)'}
             </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>Merkle Root (Transaction Body)</label>
-              <div style={{ ...styles.valueBox, fontFamily: 'monospace', fontSize: '12px' }}>
-                {txBodyHash}
-              </div>
-            </div>
-
-            {/* BÁO CÁO XÁC MINH */}
-            {isVerified && (
-              <div
-                style={{
-                  ...styles.statusBadge,
-                  backgroundColor: selectedBlockValid ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                  color: selectedBlockValid ? '#10b981' : '#ef4444',
-                  borderColor: selectedBlockValid ? '#047857' : '#b91c1c'
-                }}
-              >
-                {selectedBlockValid ? '✓ Hash và liên kết hợp lệ' : '✖ Khối không hợp lệ'}
-              </div>
-            )}
 
           </div>
         )}
@@ -229,7 +304,7 @@ export default function BlockHeaderViewer() {
   );
 }
 
-// STYLES DARK THEME
+// STYLES
 const styles = {
   container: {
     backgroundColor: '#030712',
@@ -281,14 +356,14 @@ const styles = {
     fontSize: '13px',
     cursor: 'pointer'
   },
-  btnVerify: {
-    backgroundColor: '#059669',
-    color: '#ffffff',
-    border: 'none',
-    padding: '8px 16px',
+  btnFixBtn: {
+    backgroundColor: '#1e3a8a',
+    color: '#93c5fd',
+    border: '1px solid #3b82f6',
+    padding: '6px 14px',
     borderRadius: '6px',
     fontWeight: '600',
-    fontSize: '13px',
+    fontSize: '12px',
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
@@ -357,6 +432,14 @@ const styles = {
     fontSize: '13px',
     color: '#e5e7eb',
     wordBreak: 'break-all'
+  },
+  inputTextData: {
+    padding: '8px 12px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    width: '100%',
+    boxSizing: 'border-box',
+    outline: 'none'
   },
   statusBadge: {
     marginTop: '16px',
