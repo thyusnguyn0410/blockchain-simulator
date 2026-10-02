@@ -196,7 +196,7 @@ function getTransactionId(tx) {
  * @param {object} tx - Giao dịch chứa chữ ký số
  * @returns {boolean} - true nếu chữ ký hợp lệ
  */
-}
+
 
 /**
  * Khai thác một khối mới bằng thuật toán Proof-of-Work
