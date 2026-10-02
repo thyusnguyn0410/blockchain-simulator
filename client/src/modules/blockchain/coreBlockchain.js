@@ -27,7 +27,7 @@ export class Block {
 
     // Tính lại Merkle Root từ transaction hiện tại
     calculateMerkleRoot() {
-        return getMerkleRoot(this.transactions);
+            return getMerkleRoot(this.transactions);
     }
 
     // Đồng bộ Merkle Root với transaction hiện tại
@@ -128,19 +128,20 @@ export class Blockchain {
         let current = this.head;
         let index = 0;
         let prev = null;
-
+        let isChainValid = true;
         while (current) {
             const dataOk = current.hash === current.calculateHash();
-            const linkOk = prev ? current.prevHash === prev.hash : current.prevHash === ZERO_HASH;
+            const linkOk = prev ? (current.prevHash === prev.calculateHash() && isChainValid) : (current.prevHash === "0".repeat(64) || current.prevHash === "0");
             const powOk = current.meetsDifficulty();
-
+            const valid = dataOk && linkOk && powOk;
+            if (!valid) {isChainValid = false;}
             report.push({
                 block: current,
                 index: index,
                 dataOk: dataOk,                         // Trạng thái dữ liệu Hash
                 linkOk: linkOk,                         // Trạng thái liên kết chuỗi
                 powOk: powOk,                           // Trạng thái đạt độ khó PoW
-                valid: dataOk && linkOk && powOk        // Kết luận hợp lệ tổng thể của khối
+                valid: valid       // Kết luận hợp lệ tổng thể của khối
             });
 
             prev = current;
@@ -151,11 +152,12 @@ export class Blockchain {
     }
 
     // Giả lập hành vi can thiệp/sửa đổi dữ liệu giao dịch trong một khối (Tampering)
+    
     tamper(index, newTransactions) {
         const block = this.at(index);
         if (!block) return null;
         
-        block.transactions = Array.isArray(newTransactions) ? newTransactions : [];
+        block.transactions = Array.isArray(newTransactions) ? newTransactions : [newTransactions];
         // Dữ liệu transaction đổi => Merkle Root đổi.
         // Hash cũ cố ý được giữ nguyên để mô phỏng trạng thái bị giả mạo.
         block.refreshMerkleRoot();
@@ -172,9 +174,9 @@ export class Blockchain {
             block.prevHash = i === 0 ? ZERO_HASH : blocks[i - 1].hash;
             block.refreshMerkleRoot();
             block.nonce = 0;
-
-            if (this.difficulty > 0) {
-                const res = mineBlock(block, this.difficulty);
+            const targetDiff = block.difficulty !== undefined ? block.difficulty : this.difficulty;
+            if (targetDiff > 0) {
+                const res = mineBlock(block, targetDiff);
                 totalAttempts += res.attempts;
             } else {
                 block.hash = block.calculateHash();
