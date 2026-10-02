@@ -44,8 +44,8 @@ function parseArgs() {
 
 const { args: cli, positional } = parseArgs();
 
-// Thứ tự ưu tiên: CLI flag (--http) > Vị trí (pos 0) > Biến môi trường > Giá trị mặc định
-const HTTP_PORT = Number(cli.http || positional[0] || process.env.HTTP_PORT || 3001);
+// Thứ tự ưu tiên: Biến môi trường PORT (của Render) > CLI flag (--http) > Vị trí > Default
+const HTTP_PORT = Number(process.env.PORT || cli.http || positional[0] || process.env.HTTP_PORT || 3001);
 const WS_PORT = Number(cli.ws || positional[1] || process.env.WS_PORT || 6001);
 const NODE_ID = cli.name || positional[2] || process.env.NODE_NAME || `Node-${HTTP_PORT}`;
 
@@ -74,7 +74,14 @@ function log(message) {
 
 // ------------------------------- REST API -------------------------------
 const app = express();
-app.use(cors());
+
+// Cho phép CORS toàn diện cho client web
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json({ limit: '128kb' }));
 
 app.get('/', (req, res) => res.json({
@@ -193,9 +200,9 @@ app.post('/transaction', (req, res) => {
   }
 });
 
-// Khởi chạy HTTP REST API
-app.listen(HTTP_PORT, () => {
-  log(`🚀 REST API của "${NODE_ID}" đang chạy tại http://localhost:${HTTP_PORT}`);
+// Khởi chạy HTTP REST API - BẮT BUỘC dùng host '0.0.0.0' để chạy được trên Render/Cloud
+app.listen(HTTP_PORT, '0.0.0.0', () => {
+  log(`🚀 REST API của "${NODE_ID}" đang chạy tại port ${HTTP_PORT} (0.0.0.0)`);
 });
 
 // ------------------------------ Lớp P2P ---------------------------------
@@ -208,8 +215,6 @@ if (typeof initP2PServer === 'function') {
       nodeId: NODE_ID,
       httpPort: HTTP_PORT,
       log,
-      // Snapshot giúp client có dữ liệu blockchain ngay sau khi kết nối,
-      // thay vì phải gọi lần lượt nhiều REST endpoint.
       getSnapshot: () => ({
         nodeId: NODE_ID,
         httpPort: HTTP_PORT,
@@ -223,7 +228,6 @@ if (typeof initP2PServer === 'function') {
       }),
     });
   } catch (err) {
-    // Dự phòng nếu initP2PServer nhận kiểu tham số cũ: initP2PServer(wsPort)
     initP2PServer(WS_PORT, blockchain);
   }
 }
