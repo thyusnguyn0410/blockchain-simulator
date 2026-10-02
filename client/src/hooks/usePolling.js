@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 const DEFAULT_INTERVAL = 5000;
 const DEFAULT_TIMEOUT = 3000;
 
