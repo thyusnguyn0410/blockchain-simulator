@@ -129,7 +129,7 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
         <div className="status-row">
           <span>Active node</span>
           <strong className="status-cyan node-url" title={activeUrl || "No active node"}>
-            {activeUrl || "http://localhost:3001"}
+            {activeUrl || import.meta.env.VITE_API_URL || "Connecting..."}
           </strong>
         </div>
         {error && <p className="inline-error">{error.message}</p>}
