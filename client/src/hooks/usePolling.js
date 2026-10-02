@@ -7,6 +7,9 @@ const DEFAULT_API_URLS = [
 ];
 const DEFAULT_INTERVAL = 5000;
 const DEFAULT_TIMEOUT = 3000;
+const DEFAULT_NODES = import.meta.env.VITE_API_URL 
+  ? [import.meta.env.VITE_API_URL]
+  : ["http://localhost:3001", "http://localhost:3002"];
 
 /**
  * Chuẩn hóa danh sách URL từ mảng hoặc chuỗi URL phân tách bằng dấu phẩy.
