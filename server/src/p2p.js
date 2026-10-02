@@ -398,28 +398,4 @@ module.exports = {
   getSockets,
   getPeers,
 };
-const server = http.createServer(app);
 
-initP2PServer({
-  server, // Dùng chung server này để client kết nối qua wss://...
-  wsPort: WS_PORT,
-  blockchain,
-  nodeId: NODE_ID,
-  httpPort: HTTP_PORT,
-  log,
-  getSnapshot: () => ({
-    nodeId: NODE_ID,
-    httpPort: HTTP_PORT,
-    wsPort: WS_PORT,
-    status: 'online',
-    blocks: blockchain.chain,
-    mempool: blockchain.mempool,
-    logs: logs.slice(-50),
-    peers: getPeers(),
-    difficulty: blockchain.difficulty,
-  }),
-});
-
-server.listen(HTTP_PORT, '0.0.0.0', () => {
-  log(`🚀 Server đã sẵn sàng tại port ${HTTP_PORT} (0.0.0.0)`);
-});
