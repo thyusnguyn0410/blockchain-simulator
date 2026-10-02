@@ -208,7 +208,8 @@ const server = http.createServer(app);
 if (typeof initP2PServer === 'function') {
   try {
     initP2PServer({
-      server, // Dùng chung HTTP server thay vì mở cổng riêng
+      server,
+      wsPort: WS_PORT,
       blockchain,
       nodeId: NODE_ID,
       httpPort: HTTP_PORT,
@@ -216,6 +217,7 @@ if (typeof initP2PServer === 'function') {
       getSnapshot: () => ({
         nodeId: NODE_ID,
         httpPort: HTTP_PORT,
+        wsPort: WS_PORT,
         status: 'online',
         blocks: blockchain.chain,
         mempool: blockchain.mempool,
