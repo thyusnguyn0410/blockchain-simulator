@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const DEFAULT_WS_URL = "ws://localhost:6001";
+const DEFAULT_WS_URL = import.meta.env.VITE_WS_URL || "ws://localhost:6001";
 
 export function useWebSocket(url = import.meta.env.VITE_WS_URL || DEFAULT_WS_URL) {
   const socketRef = useRef(null);
