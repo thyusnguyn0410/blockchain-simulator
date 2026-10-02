@@ -8,6 +8,7 @@ import { usePolling } from "./hooks/usePolling";
 import Button from "./components/Button";
 import Card from "./components/Card";
 import DataTable from "./components/Table";
+import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
 import "./App.css";
 
 const formatNumber = (value) => new Intl.NumberFormat("en-US").format(value || 0);
@@ -107,6 +108,96 @@ function App() {
       </section>
     </div>
   </MainLayout>;
+  // KẾT NÔI VỚI WEBSOCKET BLOCKCHAIN
+  useWebSocket();
+  const {
+    data: nodeStatus,
+    activeUrl,
+    loading,
+    error,
+  } = usePolling(); // Sử dụng hook usePolling để lấy trạng thái node từ các URL API
+
+  return (
+    <MainLayout>
+      <div className="dashboard">
+        <header className="page-header">
+          <div>
+            <span className="page-label">BLOCKCHAIN SIMULATOR</span>
+            <h1>Blockchain Dashboard</h1>
+            <p>Monitor your blockchain network and explore its current activity.</p>
+          </div>
+          <button type="button" className="primary-button">+ New Simulation</button>
+        </header>
+
+        / SHA-256 VISUALIZER /
+        <section className="crypto-panel-wrap">
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>SHA-256 Visualizer</h2>
+                <p>Visualize the cryptographic hashing process</p>
+              </div>
+            </div>
+
+            <Sha256Visualizer />
+          </div>
+        </section>
+
+        / BLOCK HEADER VIEWER /
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Block Header Viewer</h2>
+                <p>Inspect block metadata, hash links, and Merkle tree root</p>
+              </div>
+            </div>
+
+            <BlockHeaderViewer />
+          </div>
+        </section>
+        //MEMPOOL MANAGER 
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Mempool Manager</h2>
+                <p>Manage pending transactions before mining them into a block</p>
+              </div>
+            </div>
+
+            <MempoolManager />
+          </div>
+        </section>
+        // PROOF OF WORK SIMULATOR 
+        <section className="crypto-panel-wrap" style={{ marginTop: '24px' }}>
+          <div className="dashboard-panel crypto-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Proof of Work Simulator</h2>
+                <p>Simulate mining blocks and difficulty adjustment in Proof of Work consensus</p>
+              </div>
+            </div>
+
+            <ProofOfWorkSimulator />
+          </div>
+        </section>
+        <section className="stats-grid">
+          {statCards.map((card) => <StatCard key={card.title} {...card} />)}
+        </section>
+        <section className="dashboard-grid">
+          <NetworkActivity />
+          <NetworkStatus
+            nodeStatus={nodeStatus}
+            activeUrl={activeUrl}
+            loading={loading}
+            error={error} // Hiển thị thông tin trạng thái mạng dựa trên dữ liệu nodeStatus, activeUrl, loading và error
+          />
+        </section>
+        <RecentTransactions />
+      </div>
+    </MainLayout>
+  );
 }
 
 export default App;

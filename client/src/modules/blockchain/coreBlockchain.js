@@ -4,7 +4,7 @@ import { getMerkleRoot } from "../crypto/MerkleTree.js";
 import { mineBlock } from "./pow.js";
 
 // Chuỗi 64 số 0 mặc định (64 ký tự hex) dùng cho prevHash của khối Genesis
-const ZERO_HASH = new Array(65).join('0');
+export const ZERO_HASH = '0'.repeat(64);
 
 // 1. LỚP BLOCK (ĐẠI DIỆN CHO MỘT KHỐI)
 
@@ -14,12 +14,7 @@ export class Block {
         this.prevHash = prevHash || ZERO_HASH;          // Hash của khối trước đó (nếu không có thì dùng ZERO_HASH)
         this.transactions = transactions || [];         // Mảng danh sách các giao dịch chứa trong khối
         
-        // Chuyển đổi danh sách giao dịch thành mảng các mã băm SHA-256
-        let txHashes = this.transactions.map(tx => 
-            typeof tx === 'string' ? tx : sha256(JSON.stringify(tx))
-        );
-        // Tính toán Root Hash thông qua Cây Merkle từ danh sách mã băm giao dịch
-        this.merkleRoot = getMerkleRoot(txHashes);
+        this.merkleRoot = this.calculateMerkleRoot();
 
         // Mốc thời gian tạo khối (tính theo giây UNIX timestamp)
         this.timestamp = typeof timestamp === 'number' ? timestamp : Date.now() / 1000;
@@ -28,6 +23,17 @@ export class Block {
         this.next = null;                               // Con trỏ liên kết tới khối tiếp theo (Danh sách liên kết đơn)
 
         this.hash = this.calculateHash();               // Tính toán mã băm đại diện chính thức cho khối
+    }
+
+    // Tính lại Merkle Root từ transaction hiện tại
+    calculateMerkleRoot() {
+        return getMerkleRoot(this.transactions);
+    }
+
+    // Đồng bộ Merkle Root với transaction hiện tại
+    refreshMerkleRoot() {
+        this.merkleRoot = this.calculateMerkleRoot();
+        return this.merkleRoot;
     }
 
     // Tính toán mã băm SHA-256 cho Block Header
@@ -125,7 +131,7 @@ export class Blockchain {
 
         while (current) {
             const dataOk = current.hash === current.calculateHash();
-            const linkOk = prev ? current.prevHash === prev.calculateHash() : current.prevHash === ZERO_HASH;
+            const linkOk = prev ? current.prevHash === prev.hash : current.prevHash === ZERO_HASH;
             const powOk = current.meetsDifficulty();
 
             report.push({
@@ -149,12 +155,10 @@ export class Blockchain {
         const block = this.at(index);
         if (!block) return null;
         
-        block.transactions = newTransactions;
-        let txHashes = block.transactions.map(tx => 
-            typeof tx === 'string' ? tx : sha256(JSON.stringify(tx))
-        );
-        // Cập nhật lại Merkle Root sau khi sửa dữ liệu
-        block.merkleRoot = getMerkleRoot(txHashes);
+        block.transactions = Array.isArray(newTransactions) ? newTransactions : [];
+        // Dữ liệu transaction đổi => Merkle Root đổi.
+        // Hash cũ cố ý được giữ nguyên để mô phỏng trạng thái bị giả mạo.
+        block.refreshMerkleRoot();
         return block;
     }
 
@@ -164,13 +168,16 @@ export class Blockchain {
         let totalAttempts = 0;
 
         for (let i = Math.max(0, index); i < blocks.length; i++) {
-            blocks[i].prevHash = i === 0 ? ZERO_HASH : blocks[i - 1].hash;
+            const block = blocks[i];
+            block.prevHash = i === 0 ? ZERO_HASH : blocks[i - 1].hash;
+            block.refreshMerkleRoot();
+            block.nonce = 0;
 
             if (this.difficulty > 0) {
-                const res = mineBlock(blocks[i], this.difficulty);
+                const res = mineBlock(block, this.difficulty);
                 totalAttempts += res.attempts;
             } else {
-                blocks[i].hash = blocks[i].calculateHash();
+                block.hash = block.calculateHash();
             }
         }
         return totalAttempts;
