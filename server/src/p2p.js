@@ -328,14 +328,20 @@ listen() {
 }
 let activeServer = null;
 
-function initP2PServer({ wsPort, blockchain, log, getSnapshot }) {
-  // Tạo WebSocket server cho node hiện tại; React client cũng kết nối vào cổng này.
+function initP2PServer(options, legacyBlockchain) {
+  const opts =
+    typeof options === 'object' && options !== null
+      ? options
+      : { wsPort: options, blockchain: legacyBlockchain };
+
   activeServer = new P2PServer({
-    p2pPort: wsPort,
-    blockchain,
-    onLog: log,
-    getSnapshot,
+    server: opts.server, // <-- Bắt buộc truyền thuộc tính server từ opts sang!
+    p2pPort: opts.wsPort,
+    blockchain: opts.blockchain,
+    onLog: opts.log,
+    getSnapshot: opts.getSnapshot,
   }).listen();
+
   return activeServer;
 }
 
