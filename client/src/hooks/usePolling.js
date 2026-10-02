@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const DEFAULT_API_URLS = [
-  "http://localhost:3001",
-  "http://localhost:3002",
-  "http://localhost:3003",
-];
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 const DEFAULT_INTERVAL = 5000;
 const DEFAULT_TIMEOUT = 3000;
-const DEFAULT_NODES = import.meta.env.VITE_API_URL 
-  ? [import.meta.env.VITE_API_URL]
-  : ["http://localhost:3001", "http://localhost:3002"];
+
+// Ưu tiên đọc từ VITE_API_URL hoặc VITE_API_URLS trên Vercel, nếu không có mới dùng localhost
+const configuredApiUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URLS;
+
+const DEFAULT_API_URLS = configuredApiUrl
+  ? [configuredApiUrl]
+  : [
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+    ];
 
 /**
  * Chuẩn hóa danh sách URL từ mảng hoặc chuỗi URL phân tách bằng dấu phẩy.
@@ -30,20 +35,15 @@ function isAbortError(error) {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
-/**
- * Gọi polling tới endpoint HTTP và tự động fallback theo thứ tự các node.
- *
- * Node thành công gần nhất sẽ được thử trước ở lần request tiếp theo.
- * Nếu node đó không khả dụng, các node còn lại được thử theo thứ tự cấu hình.
- */
 export function usePolling(
-  urls = import.meta.env.VITE_API_URLS || DEFAULT_API_URLS,
+  urls = DEFAULT_API_URLS,
   {
     path = "/status",
     interval = DEFAULT_INTERVAL,
     timeout = DEFAULT_TIMEOUT,
     enabled = true,
   } = {},
+) {
 ) {
   // Dùng chuỗi URL ổn định để tránh tạo lại danh sách node ở mỗi lần render.
   const urlsKey = Array.isArray(urls) ? urls.join(",") : urls;
