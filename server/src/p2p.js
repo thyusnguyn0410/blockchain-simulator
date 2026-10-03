@@ -35,6 +35,7 @@ class P2PServer {
    */
   constructor({ p2pPort, blockchain, onLog, getSnapshot }) {
     this.p2pPort = p2pPort;
+    this.server = server;
     this.blockchain = blockchain;
     this.onLog = onLog || function () {};
     this.getSnapshot = getSnapshot || (() => ({}));
