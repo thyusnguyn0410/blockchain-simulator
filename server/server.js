@@ -77,24 +77,31 @@ function log(message) {
 // ------------------------------- REST API -------------------------------
 const app = express();
 
+// Cho phép CORS toàn diện cho client web
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '128kb' }));
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { message, context } = req.body;
 
-    // System instruction định hình vai trò của AI
     const systemInstruction = `Bạn là trợ lý Blockchain thông minh của dự án 
-    Blockchain Simulator. Trả lời ngắn gọn, dễ hiểu bằng tiếng Việt. 
-    Khi được hỏi về dữ liệu blockchain hiện tại, hãy dùng context được cung cấp.`;
+    Blockchain Simulator. Trả lời ngắn gọn, dễ hiểu bằng tiếng Việt.`;
 
     const prompt = `${systemInstruction}
 
-Context hiện tại của blockchain:
+Context hiện tại:
 - Số block: ${context?.height || 0}
 - Mempool: ${context?.mempoolSize || 0} giao dịch
 - Difficulty: ${context?.difficulty || 2}
 - Node: ${context?.nodeId || 'unknown'}
 
-Câu hỏi của người dùng: ${message}`;
+Câu hỏi: ${message}`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
@@ -109,28 +116,16 @@ Câu hỏi của người dùng: ${message}`;
     );
 
     const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || 'Gemini API error');
-    }
+    if (!response.ok) throw new Error(data.error?.message || 'Gemini API error');
 
     const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
       || 'Xin lỗi, tôi không thể trả lời lúc này.';
-
     res.json({ reply });
   } catch (error) {
     console.error('Chat error:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
-// Cho phép CORS toàn diện cho client web
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
-
-app.use(express.json({ limit: '128kb' }));
 
 app.get('/', (req, res) => res.json({
   name: 'Blockchain Simulator Node',
