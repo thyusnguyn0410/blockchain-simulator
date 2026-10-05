@@ -187,7 +187,11 @@ function TransactionsPanel({ transactions }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
+<<<<<<< HEAD
   const [showChat, setShowChat] = useState(false);                      
+=======
+  const [showChat, setShowChat] = useState(false);
+>>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
   const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
 
@@ -198,12 +202,21 @@ function App() {
   const handleNavigate = (label) => {
     setActiveSection(label);
     const targetMap = {
+<<<<<<< HEAD
       Dashboard: "dashboard-overview",
       Blockchain: "blockchain-tools",
       Transactions: "transactions",
       Mining: "blockchain-tools",
       "Merkle Tree": "merkle-tree-tab",
       "Network Nodes": "network-status",
+=======
+      Dashboard:        "dashboard-overview",
+      Blockchain:       "blockchain-tools",
+      Transactions:     "transactions",
+      Mining:           "pow-tool",              
+      "Merkle Tree":    "merkle-tree-tab",
+      "Network Nodes":  "network-status",
+>>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
     };
     const target = document.getElementById(targetMap[label] || "dashboard-overview");
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -217,6 +230,7 @@ function App() {
   return (
     <MainLayout activeItem={activeSection} onNavigate={handleNavigate} connection={connection}>
       <div className="dashboard" id="dashboard-overview">
+<<<<<<< HEAD
         <header className="page-header">
           <div>
             <span className="page-label">BLOCKCHAIN SIMULATOR / CONTROL ROOM</span>
@@ -353,6 +367,65 @@ function App() {
         </div>
       )}
       {/* ========================================================== */}
+=======
+
+        <section id="blockchain-tools" className="tool-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">LEARNING LAB</span>
+              <h2>Blockchain tools</h2>
+              <p>Interactive visualizations and blockchain learning simulations</p>
+            </div>
+          </div>
+
+          <div className="tool-grid">
+            <div id="sha256-tool">
+              <Card
+                title="SHA-256 visualizer"
+                description="Hashing, avalanche effect, and proof-of-work exploration"
+                className="tool-card"
+              >
+                <Sha256Visualizer />
+              </Card>
+            </div>
+
+            <div id="blockheader-tool">
+              <Card
+                title="Block header viewer"
+                description="Inspect, verify, and safely demonstrate chain integrity"
+                className="tool-card"
+              >
+                <BlockHeaderViewer />
+              </Card>
+            </div>
+
+            <div id="mempool-tool">
+              <Card
+                title="Mempool manager"
+                description="Create signed transactions and mine them into the local chain"
+                className="tool-card"
+              >
+                <MempoolManager apiUrl={activeUrl} />
+              </Card>
+            </div>
+
+            <div id="pow-tool">
+              <Card
+                title="Proof of work simulator"
+                description="Explore mining difficulty and chain reinforcement"
+                className="tool-card"
+              >
+                <ProofOfWorkSimulator />
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section id="merkle-tree-tab" className="tool-section merkle-tab-section">
+        </section>
+      </div>
+
+>>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
     </MainLayout>
   );
 }
