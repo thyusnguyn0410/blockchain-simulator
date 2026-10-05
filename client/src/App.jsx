@@ -4,7 +4,7 @@ import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
 import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
 import MempoolManager from "./modules/blockchain/MempoolManager";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
-import MerkleTree from "./modules/crypto/MerkleTree.jsx";
+import MerkleTree from "./modules/crypto/MerkleTreeVisualizer.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
