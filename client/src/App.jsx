@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";                       
 import MainLayout from "./layouts/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
 import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
 import MempoolManager from "./modules/blockchain/MempoolManager";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
-import ChatBot from "./components/ChatBot";
+import MerkleTree from "./modules/crypto/MerkleTreeVisualizer.jsx";
+import ChatBot from "./components/ChatBot";                           
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
 import Button from "./components/Button";
@@ -84,8 +85,7 @@ function ActivityChart({ logs = [], transactions = [] }) {
       </div>
       <div className="chart-legend">
         <span>
-          <i className="legend-dot cyan-dot" />
-          Events per polling window
+          <i className="legend-dot cyan-dot" />Events per polling window
         </span>
         <span>
           {logs.length
@@ -126,12 +126,12 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
         </div>
         <div className="status-row">
           <span>Difficulty</span>
-          <strong>{nodeStatus?.difficulty ?? "—"}</strong>
+          <strong>{nodeStatus?.difficulty ?? 2}</strong>
         </div>
         <div className="status-row">
           <span>Active node</span>
           <strong className="status-cyan node-url" title={activeUrl || "No active node"}>
-            {activeUrl || "No active node"}
+            {activeUrl || import.meta.env.VITE_API_URL || "Connecting..."}
           </strong>
         </div>
         {error && <p className="inline-error">{error.message}</p>}
@@ -187,25 +187,9 @@ function TransactionsPanel({ transactions }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
-  const [showChat, setShowChat] = useState(false);
-  const [theme, setTheme] = useState("dark");
-
-  const {
-    blocks = [],
-    mempool = [],
-    logs = [],
-    connection,
-    latestBlock,
-  } = useWebSocket();
-
-  const {
-    data: nodeStatus,
-    activeUrl,
-    loading,
-    error,
-    refresh,
-    onlineNodeCount = 0,
-  } = usePolling();
+  const [showChat, setShowChat] = useState(false);                      
+  const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
+  const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
 
   const transactions = useMemo(() => getTransactions(blocks, mempool), [blocks, mempool]);
   const totalTransactions =
@@ -217,7 +201,8 @@ function App() {
       Dashboard: "dashboard-overview",
       Blockchain: "blockchain-tools",
       Transactions: "transactions",
-      Mining: "mining-section",
+      Mining: "blockchain-tools",
+      "Merkle Tree": "merkle-tree-tab",
       "Network Nodes": "network-status",
     };
     const target = document.getElementById(targetMap[label] || "dashboard-overview");
@@ -229,20 +214,8 @@ function App() {
     refresh();
   };
 
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
-  };
-
   return (
-    <MainLayout
-      activeItem={activeSection}
-      onNavigate={handleNavigate}
-      connection={connection}
-      theme={theme}
-      onThemeToggle={toggleTheme}
-    >
+    <MainLayout activeItem={activeSection} onNavigate={handleNavigate} connection={connection}>
       <div className="dashboard" id="dashboard-overview">
         <header className="page-header">
           <div>
@@ -299,33 +272,6 @@ function App() {
           <TransactionsPanel transactions={transactions} />
         </section>
 
-        <section id="mining-section" className="tool-section">
-          <div className="section-heading">
-            <div>
-              <span className="page-label">⛏ MINING LAB</span>
-              <h2>Proof of Work & Mining</h2>
-              <p>Explore mining difficulty, chain reinforcement, and mempool management</p>
-            </div>
-          </div>
-
-          <div className="tool-grid">
-            <Card
-              title="Mempool manager"
-              description="Create signed transactions and mine them into the local chain"
-              className="tool-card"
-            >
-              <MempoolManager apiUrl={activeUrl} />
-            </Card>
-            <Card
-              title="Proof of work simulator"
-              description="Explore mining difficulty and chain reinforcement"
-              className="tool-card"
-            >
-              <ProofOfWorkSimulator />
-            </Card>
-          </div>
-        </section>
-
         <section id="blockchain-tools" className="tool-section">
           <div className="section-heading">
             <div>
@@ -350,10 +296,38 @@ function App() {
             >
               <BlockHeaderViewer />
             </Card>
+            <Card
+              title="Mempool manager"
+              description="Create signed transactions and mine them into the local chain"
+              className="tool-card"
+            >
+              <MempoolManager apiUrl={activeUrl} />
+            </Card>
+            <Card
+              title="Proof of work simulator"
+              description="Explore mining difficulty and chain reinforcement"
+              className="tool-card"
+            >
+              <ProofOfWorkSimulator />
+            </Card>
           </div>
         </section>
+        <section id="merkle-tree-tab" className="tool-section merkle-tab-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">MERKLE LAB</span>
+              <h2>Mô phỏng flow Cây Merkle</h2>
+              <p>Khám phá cách giao dịch được băm và ghép thành Merkle Root.</p>
+            </div>
+          </div>
+          <div className="dashboard-panel merkle-panel">
+            <MerkleTree />
+          </div>
+        </section>
+
       </div>
 
+      {/* ==================== CHATBOT FLOATING ==================== */}      
       <button
         className="chat-fab"
         onClick={() => setShowChat((v) => !v)}
@@ -378,6 +352,7 @@ function App() {
           <ChatBot nodeStatus={nodeStatus} />
         </div>
       )}
+      {/* ========================================================== */}
     </MainLayout>
   );
 }

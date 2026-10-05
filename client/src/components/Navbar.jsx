@@ -1,38 +1,4 @@
-export default function Navbar({ onMenuClick, connection = "connecting", theme = "dark", onThemeToggle }) {
+export default function Navbar({ onMenuClick, connection = "connecting" }) {
   const connected = connection === "connected";
-
-  return (
-    <header className="navbar">
-      <div className="navbar-left">
-        <button type="button" className="mobile-menu-button" onClick={onMenuClick} aria-label="Open navigation">☰</button>
-        <div className="brand">
-          <div className="brand-logo">⛓️</div>
-          <div className="brand-info">
-            <strong>BlockSim</strong>
-            <span>Simulator</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="navbar-right">
-        <button
-          className="theme-toggle-btn"
-          onClick={onThemeToggle}
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-          aria-label="Toggle theme"
-        >
-          {theme === "dark" ? "☀️" : "🌙"}
-        </button>
-
-        <span className={`network-indicator ${connected ? "connected" : ""}`}>
-          <i></i>
-          {connected ? "Live" : "Offline"}
-        </span>
-
-        <div className="profile-button">
-          <div className="profile-avatar">👤</div>
-        </div>
-      </div>
-    </header>
-  );
+  return <header className="navbar"><div className="navbar-left"><button type="button" className="mobile-menu-button" onClick={onMenuClick} aria-label="Open navigation">☰</button><div className="brand"><div className="brand-logo">B</div><div className="brand-info"><strong>BlockSim</strong><span>Blockchain simulator</span></div></div></div><div className="navbar-right"><div className={`network-indicator ${connected ? "" : "is-pending"}`}><span className="online-dot" />{connected ? "Network online" : "Connecting…"}</div><div className="navbar-divider" /><button type="button" className="profile-button" aria-label="Open profile menu"><span className="profile-avatar">T</span><span className="profile-name">Team workspace</span><span className="profile-arrow">⌄</span></button></div></header>;
 }
