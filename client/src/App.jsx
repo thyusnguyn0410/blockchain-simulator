@@ -189,7 +189,6 @@ function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [showChat, setShowChat] = useState(false);                      
   const [showChat, setShowChat] = useState(false);
->>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
   const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
 
