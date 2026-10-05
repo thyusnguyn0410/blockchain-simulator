@@ -13,6 +13,7 @@ const express = require('express');
 const cors = require('cors');
 const { Blockchain } = require('./src/blockchain');
 const p2pModule = require('./src/p2p');
+const http = require('http');
 
 const {
   initP2PServer,
@@ -44,8 +45,8 @@ function parseArgs() {
 
 const { args: cli, positional } = parseArgs();
 
-// Thứ tự ưu tiên: CLI flag (--http) > Vị trí (pos 0) > Biến môi trường > Giá trị mặc định
-const HTTP_PORT = Number(cli.http || positional[0] || process.env.HTTP_PORT || 3001);
+// Thứ tự ưu tiên: Biến môi trường PORT (của Render) > CLI flag (--http) > Vị trí > Default
+const HTTP_PORT = Number(process.env.PORT || cli.http || positional[0] || process.env.HTTP_PORT || 3001);
 const WS_PORT = Number(cli.ws || positional[1] || process.env.WS_PORT || 6001);
 const NODE_ID = cli.name || positional[2] || process.env.NODE_NAME || `Node-${HTTP_PORT}`;
 
@@ -72,10 +73,66 @@ function log(message) {
   console.log(`[${NODE_ID}] ${message}`);
 }
 
+
 // ------------------------------- REST API -------------------------------
 const app = express();
-app.use(cors());
+
+// Cho phép CORS toàn diện cho client web
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json({ limit: '128kb' }));
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, context } = req.body;
+
+    const systemInstruction = `Bạn là trợ lý Blockchain thông minh của dự án 
+    Blockchain Simulator. Trả lời ngắn gọn, dễ hiểu bằng tiếng Việt.
+    Khi được hỏi về dữ liệu blockchain hiện tại, hãy dùng context được cung cấp.
+
+QUY TẮC ĐỊNH DẠNG:
+- KHÔNG dùng cú pháp LaTeX (không viết $\\rightarrow$, $\\Rightarrow$, $x^2$...).
+- Dùng ký tự Unicode thay thế: → ⇒ × ≈ ≤ ≥
+- Dùng markdown đơn giản: **bold**, *italic*, danh sách - hoặc 1. 2. 3.
+- KHÔNG dùng bảng markdown phức tạp.`;
+
+    const prompt = `${systemInstruction}
+
+Context hiện tại:
+- Số block: ${context?.height || 0}
+- Mempool: ${context?.mempoolSize || 0} giao dịch
+- Difficulty: ${context?.difficulty || 2}
+- Node: ${context?.nodeId || 'unknown'}
+
+Câu hỏi: ${message}`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
+        }),
+      }
+    );
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || 'Gemini API error');
+
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
+      || 'Xin lỗi, tôi không thể trả lời lúc này.';
+    res.json({ reply });
+  } catch (error) {
+    console.error('Chat error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.get('/', (req, res) => res.json({
   name: 'Blockchain Simulator Node',
@@ -166,6 +223,12 @@ app.post('/mine', (req, res) => {
     }
     log(`Đào xong Block #${newBlock.index} trong ${newBlock.timeTakenMs} ms (${newBlock.attempts} lần thử)`);
     broadcastLatest(blockchain);
+    // Gửi state mới cho Dashboard ngay sau khi đào xong block.
+    p2pModule.broadcastEvent('state', {
+      blocks: blockchain.chain,
+      mempool: blockchain.mempool,
+      difficulty: blockchain.difficulty,
+    });
     return res.json(newBlock);
   } catch (error) {
     log(`Lỗi đào block: ${error.message}`);
@@ -179,30 +242,27 @@ app.post('/transaction', (req, res) => {
     const tx = blockchain.addToMempool(req.body);
     log(`Giao dịch ${tx.id.slice(0, 12)} đã vào mempool (${blockchain.mempool.length})`);
     broadcastTransaction(tx);
-    p2pModule.broadcast({ type: p2pModule.MessageType.EVENT, event: 'mempool', data: blockchain.mempool.length });
+    // Gửi lại toàn bộ mempool để giao diện luôn hiển thị đúng số transaction đang chờ.
+    p2pModule.broadcastEvent('mempool', blockchain.mempool);
     return res.status(201).json({ transaction: tx, mempoolSize: blockchain.mempool.length });
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
 });
 
-// Khởi chạy HTTP REST API
-app.listen(HTTP_PORT, () => {
-  log(`🚀 REST API của "${NODE_ID}" đang chạy tại http://localhost:${HTTP_PORT}`);
-});
+// Tạo HTTP Server bọc Express
+const server = http.createServer(app);
 
-// ------------------------------ Lớp P2P ---------------------------------
-// Khởi chạy WebSocket Server với WS_PORT chính xác của Node này
+// Gắn P2P WebSocket chạy chung server HTTP
 if (typeof initP2PServer === 'function') {
   try {
     initP2PServer({
+      server,
       wsPort: WS_PORT,
       blockchain,
       nodeId: NODE_ID,
       httpPort: HTTP_PORT,
       log,
-      // Snapshot giúp client có dữ liệu blockchain ngay sau khi kết nối,
-      // thay vì phải gọi lần lượt nhiều REST endpoint.
       getSnapshot: () => ({
         nodeId: NODE_ID,
         httpPort: HTTP_PORT,
@@ -216,10 +276,14 @@ if (typeof initP2PServer === 'function') {
       }),
     });
   } catch (err) {
-    // Dự phòng nếu initP2PServer nhận kiểu tham số cũ: initP2PServer(wsPort)
-    initP2PServer(WS_PORT, blockchain);
+    // Trường hợp dự phòng nếu initP2PServer nhận httpServer trực tiếp
+    initP2PServer(server, blockchain);
   }
 }
+
+server.listen(HTTP_PORT, '0.0.0.0', () => {
+  log(`🚀 Server đã sẵn sàng tại port ${HTTP_PORT} (0.0.0.0)`);
+});
 
 if (INITIAL_PEERS.length > 0 && typeof connectToPeers === 'function') {
   log(`🔗 Đang kết nối tới peers: ${INITIAL_PEERS.join(', ')}`);

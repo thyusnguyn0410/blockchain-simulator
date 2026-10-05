@@ -12,6 +12,7 @@
 
 const { WebSocketServer, WebSocket } = require('ws');
 const { isValidChain } = require('./blockchain.js');
+const http = require('http');
 
 const MessageType = {
   // Message riêng của React client để nhận dạng kết nối giao diện.
@@ -32,21 +33,37 @@ class P2PServer {
    * @param {(line:string)=>void} [opts.onLog]  Callback log — server.js in ra console / lưu buffer cho LiveLogViewer
    * @param {()=>object} [opts.getSnapshot]  Snapshot gửi cho client browser khi bắt tay
    */
-  constructor({ p2pPort, blockchain, onLog, getSnapshot }) {
+  constructor({ p2pPort, server, blockchain, onLog, getSnapshot }) {
     this.p2pPort = p2pPort;
+    this.server = server;
     this.blockchain = blockchain;
     this.onLog = onLog || function () {};
     this.getSnapshot = getSnapshot || (() => ({}));
     this.sockets = []; // tất cả kết nối đang mở, cả inbound (server) lẫn outbound (client)
   }
 
-  /** Mở WebSocketServer để nhận kết nối từ các Node khác. */
-  listen() {
-    const server = new WebSocketServer({ port: this.p2pPort });
-    server.on('connection', (ws) => this._initConnection(ws));
-    server.on('error', (err) => this.onLog('[P2P] Server error: ' + err.message));
-    this.onLog('[P2P] Listening for peer-to-peer connections on port ' + this.p2pPort);
-    this.wss = server;
+listen() {
+    if (this.server) {
+      const server = new WebSocketServer({ noServer: true });
+
+      server.on('connection', (ws) => this._initConnection(ws));
+      server.on('error', (err) => this.onLog('[P2P] Server error: ' + err.message));
+
+      this.server.on('upgrade', (request, socket, head) => {
+        server.handleUpgrade(request, socket, head, (ws) => {
+          server.emit('connection', ws, request);
+        });
+      });
+
+      this.onLog('[P2P] WebSocket Server gắn trực tiếp vào HTTP Server (noServer upgrade)');
+      this.wss = server;
+    } else {
+      const server = new WebSocketServer({ port: this.p2pPort });
+      server.on('connection', (ws) => this._initConnection(ws));
+      server.on('error', (err) => this.onLog('[P2P] Server error: ' + err.message));
+      this.onLog('[P2P] Listening for peer-to-peer connections on port ' + this.p2pPort);
+      this.wss = server;
+    }
     return this;
   }
 
@@ -149,6 +166,10 @@ class P2PServer {
         this._handleIncomingTransaction(message.data, ws);
         break;
 
+      case MessageType.EVENT:
+        // Event state/mempool chỉ dành cho trình duyệt, node P2P không cần xử lý.
+        break;
+
       default:
         this.onLog('[P2P] Message type không xác định: ' + message.type);
     }
@@ -229,7 +250,14 @@ class P2PServer {
       return;
     }
 
-    this.blockchain.addToMempool(tx);
+    try {
+      this.blockchain.addToMempool(tx);
+    } catch (error) {
+      // Peer có thể chưa đồng bộ số dư hoặc nonce, nên từ chối giao dịch
+      // một cách an toàn thay vì làm tiến trình node bị dừng.
+      this.onLog('[P2P] Từ chối transaction từ mạng: ' + error.message);
+      return;
+    }
     this.onLog('[P2P] Nhận giao dịch mới từ mạng, đã thêm vào mempool');
 
     // Lan truyền tiếp cho các peer khác (trừ người vừa gửi) — flooding đơn giản.
@@ -251,7 +279,12 @@ class P2PServer {
   }
 
   broadcastEvent(event, data) {
-    this.broadcast({ type: MessageType.EVENT, event, data });
+    // Event của Dashboard chỉ gửi cho trình duyệt, không gửi sang node P2P.
+    this.sockets.forEach((ws) => {
+      if (ws.__isClient) {
+        this._write(ws, { type: MessageType.EVENT, event, data });
+      }
+    });
   }
 
   getPeerCount() {
@@ -294,17 +327,22 @@ class P2PServer {
     return { type: MessageType.NEW_TRANSACTION, data: tx };
   }
 }
-
 let activeServer = null;
 
-function initP2PServer({ wsPort, blockchain, log, getSnapshot }) {
-  // Tạo WebSocket server cho node hiện tại; React client cũng kết nối vào cổng này.
+function initP2PServer(options, legacyBlockchain) {
+  const opts =
+    typeof options === 'object' && options !== null
+      ? options
+      : { wsPort: options, blockchain: legacyBlockchain };
+
   activeServer = new P2PServer({
-    p2pPort: wsPort,
-    blockchain,
-    onLog: log,
-    getSnapshot,
+    server: opts.server, // <-- Bắt buộc truyền thuộc tính server từ opts sang!
+    p2pPort: opts.wsPort,
+    blockchain: opts.blockchain,
+    onLog: opts.log,
+    getSnapshot: opts.getSnapshot,
   }).listen();
+
   return activeServer;
 }
 
@@ -339,6 +377,10 @@ function broadcastTransaction(tx) {
   if (activeServer) activeServer.broadcastTransaction(tx);
 }
 
+function broadcastEvent(event, data) {
+  if (activeServer) activeServer.broadcastEvent(event, data);
+}
+
 function getSockets() {
   return activeServer ? activeServer.sockets : [];
 }
@@ -359,6 +401,8 @@ module.exports = {
   broadcast,
   broadcastLatest,
   broadcastTransaction,
+  broadcastEvent,
   getSockets,
   getPeers,
 };
+

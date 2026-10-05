@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const DEFAULT_API_URLS = [
-  "http://localhost:3001",
-  "http://localhost:3002",
-  "http://localhost:3003",
-];
 const DEFAULT_INTERVAL = 5000;
 const DEFAULT_TIMEOUT = 3000;
+
+// Ưu tiên đọc biến môi trường Vercel, nếu không có mới dùng localhost
+const configuredApiUrl =
+  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_URLS;
+
+const DEFAULT_API_URLS = configuredApiUrl
+  ? [configuredApiUrl]
+  : [
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+    ];
 
 /**
  * Chuẩn hóa danh sách URL từ mảng hoặc chuỗi URL phân tách bằng dấu phẩy.
@@ -15,7 +22,7 @@ function getApiUrls(urls) {
   const values = Array.isArray(urls) ? urls : [urls];
 
   return values
-    .flatMap((value) => typeof value === "string" ? value.split(",") : [])
+    .flatMap((value) => (typeof value === "string" ? value.split(",") : []))
     .map((value) => value.trim().replace(/\/+$/, ""))
     .filter(Boolean);
 }
@@ -29,24 +36,21 @@ function isAbortError(error) {
 
 /**
  * Gọi polling tới endpoint HTTP và tự động fallback theo thứ tự các node.
- *
- * Node thành công gần nhất sẽ được thử trước ở lần request tiếp theo.
- * Nếu node đó không khả dụng, các node còn lại được thử theo thứ tự cấu hình.
  */
 export function usePolling(
-  urls = import.meta.env.VITE_API_URLS || DEFAULT_API_URLS,
+  urls = DEFAULT_API_URLS,
   {
     path = "/status",
     interval = DEFAULT_INTERVAL,
     timeout = DEFAULT_TIMEOUT,
     enabled = true,
-  } = {},
+  } = {}
 ) {
   // Dùng chuỗi URL ổn định để tránh tạo lại danh sách node ở mỗi lần render.
   const urlsKey = Array.isArray(urls) ? urls.join(",") : urls;
   const apiUrls = useMemo(
     () => getApiUrls(urlsKey || DEFAULT_API_URLS),
-    [urlsKey],
+    [urlsKey]
   );
   const requestRef = useRef(null);
   const requestIdRef = useRef(0);
@@ -55,6 +59,7 @@ export function usePolling(
   const [activeUrl, setActiveUrl] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(enabled);
+  const [onlineNodeCount, setOnlineNodeCount] = useState(0);
 
   /**
    * Gọi lần lượt các node cho đến khi nhận được phản hồi thành công.
@@ -100,6 +105,21 @@ export function usePolling(
         setData(nextData);
         setError(null);
         setLoading(false);
+
+        // Kiểm tra số lượng node online
+        Promise.allSettled(
+          apiUrls.map(async (url) => {
+            const res = await fetch(`${url}/status`, {
+              headers: { Accept: "application/json" },
+            });
+            return res.ok;
+          })
+        ).then((results) => {
+          setOnlineNodeCount(
+            results.filter((res) => res.status === "fulfilled" && res.value).length
+          );
+        });
+
         if (isNewActiveUrl) {
           console.info(`[Polling] Đã kết nối thành công tới ${baseUrl}.`);
         }
@@ -110,7 +130,9 @@ export function usePolling(
         }
 
         if (!isAbortError(requestError)) {
-          failedUrls.push(`${baseUrl}: ${requestError.message || "Lỗi không xác định."}`);
+          failedUrls.push(
+            `${baseUrl}: ${requestError.message || "Lỗi không xác định."}`
+          );
           console.warn(`[Polling] Không thể kết nối tới ${baseUrl}:`, requestError);
         }
       } finally {
@@ -119,16 +141,13 @@ export function usePolling(
     }
 
     const fallbackError = new Error(
-      `Không thể kết nối tới bất kỳ node nào. ${failedUrls.join("; ")}`,
+      `Không thể kết nối tới bất kỳ node nào. ${failedUrls.join("; ")}`
     );
     setError(fallbackError);
     setLoading(false);
     return null;
   }, [apiUrls, path, timeout]);
 
-  /**
-   * Khởi động polling định kỳ và hủy timer/request khi hook bị tháo.
-   */
   useEffect(() => {
     if (!enabled) {
       return undefined;
@@ -155,10 +174,14 @@ export function usePolling(
     };
   }, [enabled, interval, poll]);
 
-  /**
-   * Cho phép gọi polling ngay lập tức thay vì chờ chu kỳ tiếp theo.
-   */
   const refresh = useCallback(() => poll(), [poll]);
 
-  return { data, activeUrl, error, loading: enabled && loading, refresh };
+  return {
+    data,
+    activeUrl,
+    error,
+    loading: enabled && loading,
+    onlineNodeCount,
+    refresh,
+  };
 }
