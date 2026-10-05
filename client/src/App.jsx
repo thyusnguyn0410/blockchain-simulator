@@ -239,15 +239,45 @@ function App() {
         </header>
 
         <section className="stats-grid" aria-label="Network metrics">
-          <MetricCard label="Total transactions" value={formatNumber(totalTransactions)} detail="Confirmed + pending" icon="⇄" tone="cyan" />
-          <MetricCard label="Active nodes" value={formatNumber(onlineNodeCount || (nodeStatus?.peers ? nodeStatus.peers + 1 : 1))} detail={nodeStatus?.status === "online" ? "Reporting online" : "Waiting for node"} icon="◎" tone="green" />
-          <MetricCard label="Latest block" value={`#${latestBlock?.index ?? nodeStatus?.height ?? 0}`} detail={latestBlock ? shortHash(latestBlock.hash) : "Awaiting snapshot"} icon="#" tone="purple" />
-          <MetricCard label="Mempool" value={formatNumber(mempool.length)} detail="Transactions awaiting mining" icon="⌁" tone="orange" />
+          <MetricCard
+            label="Total transactions"
+            value={formatNumber(totalTransactions)}
+            detail="Confirmed + pending"
+            icon="⇄"
+            tone="cyan"
+          />
+          <MetricCard
+            label="Active nodes"
+            value={formatNumber(onlineNodeCount || (nodeStatus?.peers ? nodeStatus.peers + 1 : 1))}
+            detail={nodeStatus?.status === "online" ? "Reporting online" : "Waiting for node"}
+            icon="◎"
+            tone="green"
+          />
+          <MetricCard
+            label="Latest block"
+            value={`#${latestBlock?.index ?? nodeStatus?.height ?? 0}`}
+            detail={latestBlock ? shortHash(latestBlock.hash) : "Awaiting snapshot"}
+            icon="#"
+            tone="purple"
+          />
+          <MetricCard
+            label="Mempool"
+            value={formatNumber(mempool.length)}
+            detail="Transactions awaiting mining"
+            icon="⌁"
+            tone="orange"
+          />
         </section>
 
         <section className="dashboard-grid" id="network-status">
           <ActivityChart logs={logs} transactions={transactions} />
-          <NetworkStatus nodeStatus={nodeStatus} activeUrl={activeUrl} loading={loading} error={error} connection={connection} />
+          <NetworkStatus
+            nodeStatus={nodeStatus}
+            activeUrl={activeUrl}
+            loading={loading}
+            error={error}
+            connection={connection}
+          />
         </section>
 
         <section id="transactions">
@@ -264,10 +294,18 @@ function App() {
           </div>
 
           <div className="tool-grid">
-            <Card title="Mempool manager" description="Create signed transactions and mine them into the local chain" className="tool-card">
+            <Card
+              title="Mempool manager"
+              description="Create signed transactions and mine them into the local chain"
+              className="tool-card"
+            >
               <MempoolManager apiUrl={activeUrl} />
             </Card>
-            <Card title="Proof of work simulator" description="Explore mining difficulty and chain reinforcement" className="tool-card">
+            <Card
+              title="Proof of work simulator"
+              description="Explore mining difficulty and chain reinforcement"
+              className="tool-card"
+            >
               <ProofOfWorkSimulator />
             </Card>
           </div>
@@ -283,10 +321,18 @@ function App() {
           </div>
 
           <div className="tool-grid">
-            <Card title="SHA-256 visualizer" description="Hashing, avalanche effect, and proof-of-work exploration" className="tool-card">
+            <Card
+              title="SHA-256 visualizer"
+              description="Hashing, avalanche effect, and proof-of-work exploration"
+              className="tool-card"
+            >
               <Sha256Visualizer />
             </Card>
-            <Card title="Block header viewer" description="Inspect, verify, and safely demonstrate chain integrity" className="tool-card">
+            <Card
+              title="Block header viewer"
+              description="Inspect, verify, and safely demonstrate chain integrity"
+              className="tool-card"
+            >
               <BlockHeaderViewer />
             </Card>
           </div>
@@ -306,7 +352,13 @@ function App() {
         <div className="chat-panel">
           <div className="chat-header">
             <span>🤖 Trợ lý Blockchain AI</span>
-            <button className="chat-close" onClick={() => setShowChat(false)} aria-label="Đóng chat">✕</button>
+            <button
+              className="chat-close"
+              onClick={() => setShowChat(false)}
+              aria-label="Đóng chat"
+            >
+              ✕
+            </button>
           </div>
           <ChatBot nodeStatus={nodeStatus} />
         </div>
