@@ -126,12 +126,12 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
         </div>
         <div className="status-row">
           <span>Difficulty</span>
-          <strong>{nodeStatus?.difficulty ?? 2}</strong>
+          <strong>{nodeStatus?.difficulty ?? "—"}</strong>
         </div>
         <div className="status-row">
           <span>Active node</span>
           <strong className="status-cyan node-url" title={activeUrl || "No active node"}>
-            {activeUrl || "Connecting..."}
+            {activeUrl || "No active node"}
           </strong>
         </div>
         {error && <p className="inline-error">{error.message}</p>}
