@@ -88,14 +88,82 @@ node src/simulator/attackScenarios.js
 
 ```
 blockchain-simulator/
-├── client/              # Frontend (React + Vite)
-│   └── src/
-│       ├── modules/     # Crypto + Blockchain Core
-│       ├── simulator/   # QA - Attack Simulator
-│       ├── components/  # UI Components
-│       └── hooks/
-├── server/              # Backend WebSocket
-└── README.md
+│
+├── .gitignore                      # Cấu hình chặn file rác, dependencies và biến môi trường
+├── package.json                    # Cấu hình scripts và dependencies cấp root
+├── package-lock.json
+│
+├── server/                         # Backend mô phỏng mạng P2P & Multi-Node (Node.js/Express)
+│   ├── src/
+│   │   ├── blockchain.js           # Core Blockchain, Genesis Block, Mempool, PoW, Hash SHA-256
+│   │   └── p2p.js                  # P2P WebSocket server/client, xử lý broadcast & sync chain
+│   ├── test/                       # Unit Test cho backend core
+│   │   └── blockchain.test.js      # Kiểm thử tính toàn vẹn chain và thuật toán lõi
+│   ├── server.js                   # Entry point Node (nhận port động, Express REST API + WS)
+│   ├── run-nodes.bat               # Script Windows chạy tự động cụm multi-node cục bộ
+│   ├── package.json                # Dependencies backend (express, ws, cors, crypto-js...)
+│   └── package-lock.json
+│
+└── client/                         # Frontend giao diện người dùng (React + Vite + Tailwind CSS)
+    ├── .gitignore                  # Gitignore riêng của client
+    ├── README.md                   # Hướng dẫn khởi chạy frontend
+    ├── eslint.config.js            # Cấu hình kiểm tra cú pháp code JavaScript/React
+    ├── index.html                  # File template HTML chính
+    ├── package.json                # Dependencies frontend (lucide-react, recharts, framer-motion...)
+    ├── package-lock.json
+    ├── vite.config.js              # Cấu hình Vite build & alias polyfill crypto
+    │
+    ├── public/                     # Tài nguyên tĩnh công khai (favicon, svg assets)
+    │
+    └── src/
+        ├── assets/                 # Hình ảnh, font chữ tĩnh
+        │
+        ├── components/             # Các UI Components tái sử dụng chung
+        │   ├── Button.jsx          # Nút bấm tương tác
+        │   ├── Card.jsx            # Khung thẻ hiển thị giao diện glassmorphism
+        │   ├── ChatBot.jsx         # Trợ lý AI ChatBot tương tác giải thích Blockchain
+        │   ├── Navbar.jsx          # Thanh điều hướng phía trên
+        │   ├── Sidebar.jsx         # Thanh menu điều hướng bên trái workspace
+        │   └── Table.jsx           # Bảng hiển thị dữ liệu chuẩn hóa
+        │
+        ├── layouts/                # Cấu trúc layout trang
+        │   └── MainLayout.jsx      # Khung điều hướng chung, Dark Theme, Sidebar & Header
+        │
+        ├── modules/                # Các phân hệ tính năng chuyên sâu
+        │   ├── crypto/             # Phân hệ Mật mã học (P1, P3, P5)
+        │   │   ├── ECDSA.js               # Thuật toán sinh khóa, ký số và xác minh ECDSA
+        │   │   ├── EcdsaVisualizer.jsx    # UI tương tác bộ công cụ ký số ECDSA
+        │   │   ├── MerkleTree.js          # Thuật toán dựng cây Merkle, tính Root & Proof O(log n)
+        │   │   ├── MerkleTree.jsx         # UI trực quan hóa cấu trúc cây Merkle
+        │   │   ├── SHA-256.js             # Thuật toán băm SHA-256 và Avalanche Effect
+        │   │   ├── Sha256Visualizer.jsx   # UI mô phỏng hàm băm và cơ chế chống giả mạo
+        │   │   └── crypto.test.js         # Unit Test kiểm thử các thuật toán mật mã
+        │   │
+        │   ├── blockchain/         # Phân hệ Lõi Blockchain (P2, P4, P6, P7)
+        │   │   ├── BlockHeaderViewer.jsx  # Xem chi tiết cấu trúc Block & Header
+        │   │   ├── MempoolManager.jsx     # Giao diện quản lý hàng đợi giao dịch Mempool
+        │   │   ├── ProofOfWorkSimulator.jsx # Giao diện mô phỏng đào PoW, thử nonce theo difficulty
+        │   │   ├── coreBlockchain.js      # Logic xác thực và xử lý chain phía client
+        │   │   ├── mempool.js             # Logic xử lý thuật toán hàng đợi giao dịch Mempool
+        │   │   └── pow.js                 # Thuật toán đào Proof of Work (PoW)
+        │   │
+        │   └── network/            # Phân hệ Mạng P2P & Giám sát Node (P8, P9)
+        │       ├── NetworkDashboard.jsx   # Bảng điều khiển trung tâm trạng thái mạng
+        │       ├── NodeCard.jsx           # Thẻ hiển thị thông tin từng Node (Height, Peers, Status)
+        │       └── LiveLogViewer.jsx      # Hộp hiển thị nhật ký truyền tin thời gian thực
+        │
+        ├── simulator/              # Phân hệ Mô phỏng Tấn công & Kháng lỗi (P10, P11)
+        │   ├── attackScenarios.js         # Kịch bản tấn công: Sửa Block, Double Spending, Fork
+        │   └── attackScenarios.test.js    # Unit Test kiểm thử cơ chế phòng vệ của chuỗi
+        │
+        ├── hooks/                  # Custom React Hooks
+        │   ├── useWebSocket.js     # Hook lắng nghe kết nối socket hai chiều thời gian thực
+        │   └── usePolling.js       # Hook dự phòng polling dữ liệu REST API
+        │
+        ├── App.jsx                 # Điều phối Routing và trạng thái toàn cục ứng dụng
+        ├── App.css                 # Style tùy biến mở rộng (ChatBot widget, animations)
+        ├── index.css               # Cấu hình Tailwind CSS, design tokens và theme toàn cục
+        └── main.jsx                # Điểm khởi chạy (Mount React DOM)
 ```
 
 ---
