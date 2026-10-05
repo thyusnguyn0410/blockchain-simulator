@@ -252,9 +252,9 @@ File `attackScenarios.js` chứa logic, `attackScenarios.test.js` chứa test.
 
 ### 7.3. Double Spending (Chi tiêu gấp đôi)
 
-**Mô tả:** Hacker ký 2 giao dịch cùng số tiền, cùng nonce.  
-**Phòng chống:** Nonce + Balance Check.  
-**Kết quả:** ⚠️ Cần bổ sung cơ chế.
+**Mô tả:** Kẻ tấn công dùng khóa riêng tư hợp lệ ký 2 giao dịch khác nhau với cùng giá trị nonce và số tiền vượt quá số dư ví.
+**Phòng chống:** Hệ thống xác minh chữ ký hợp lệ, sau đó kiểm tra xung đột nonce và số dư khả dụng (Mempool verification). Giao dịch đầu tiên được chấp nhận, giao dịch thứ hai bị từ chối.
+**Kết quả:** ✅ Phát hiện và ngăn chặn thành công.
 
 ### 7.4. Fork (Chain Reorganization)
 
@@ -289,7 +289,7 @@ npx vitest run
 |----------|-------------------|---------|
 | Tx Tampering | ECDSA Signature | ✅ Phát hiện |
 | Block Tampering | Hash Chain | ✅ Phát hiện |
-| Double Spending | Nonce + Balance | ⚠️ Cần bổ sung |
+| Double Spending | Nonce + Balance | ✅ Ngăn chặn |
 | Fork | Longest Chain Rule | ✅ Đồng thuận |
 
 ---
@@ -384,41 +384,40 @@ Mặc dù hệ thống đã hoạt động đúng theo thiết kế và vượt 
 
 | # | Hạn chế | Mô tả | Hướng khắc phục |
 |---|---------|-------|-----------------|
-| 1 | **Double Spending chưa được chặn triệt để** | Hệ thống chưa kiểm tra nonce và số dư của ví trước khi chấp nhận giao dịch vào Mempool. Hacker có thể ký 2 giao dịch cùng số tiền, cùng nonce. | Bổ sung hàm `checkBalance()` và `checkNonce()` trong Mempool. |
-| 2 | **Chưa mô phỏng tấn công 51%** | Chưa có kịch bản mô phỏng khi một miner kiểm soát >51% hashrate để đảo ngược giao dịch. | Thêm kịch bản `simulate51PercentAttack()` trong `attackScenarios.js`. |
-| 3 | **Chưa chống Replay Attack** | Giao dịch không có timestamp validation. Hacker có thể replay giao dịch cũ trên chain khác. | Thêm trường `timestamp` và kiểm tra thời gian hợp lệ (< 5 phút). |
-| 4 | **Private key lưu dạng plaintext** | Trong quá trình test, private key được sinh và lưu tạm trong biến, không mã hóa. | Mã hóa private key bằng AES-256 trước khi lưu trữ. |
+| 1 | **Chưa mô phỏng tấn công 51%** | Chưa có kịch bản mô phỏng khi một miner kiểm soát >51% hashrate để đảo ngược giao dịch. | Thêm kịch bản `simulate51PercentAttack()` trong `attackScenarios.js`. |
+| 2 | **Chưa chống Replay Attack đa chuỗi** | Giao dịch chưa tích hợp Chain ID và hạn mức thời gian (timestamp validation). | Thêm trường `timestamp` và `chainId` để kiểm tra thời gian hợp lệ (< 5 phút). |
+| 3 | **Private key lưu dạng plaintext trong UI test** | Trong quá trình kiểm thử nhanh trên web, private key được lưu tạm trong bộ nhớ/state chưa qua mã hóa. | Mã hóa private key bằng chuẩn AES-256 trước khi lưu trữ hoặc dùng Web Crypto API. |
 
 ### 11.2. Hạn chế về hiệu năng
 
 | # | Hạn chế | Mô tả | Hướng khắc phục |
 |---|---------|-------|-----------------|
-| 5 | **PoW difficulty mặc định = 0** | Trong môi trường test, difficulty được đặt = 0 để chạy nhanh. Chưa kiểm thử với difficulty cao (3-5). | Thêm test case với `difficulty: 3` để đo thời gian đào. |
-| 6 | **Mempool chưa có giới hạn kích thước** | Mempool có thể phình to vô hạn nếu có nhiều giao dịch. | Giới hạn Mempool tối đa 1000 giao dịch, loại bỏ giao dịch cũ. |
-| 7 | **WebSocket chưa có reconnection logic** | Nếu kết nối WebSocket bị đứt, client không tự động kết nối lại. | Thêm exponential backoff reconnection trong `useWebSocket.js`. |
+| 4 | **PoW difficulty mặc định = 0** | Trong môi trường test, difficulty được đặt = 0 để chạy nhanh. Chưa kiểm thử với difficulty cao (3-5). | Thêm test case với `difficulty: 3` để đo thời gian đào. |
+| 5 | **Mempool chưa có giới hạn kích thước** | Mempool có thể phình to vô hạn nếu có nhiều giao dịch. | Giới hạn Mempool tối đa 1000 giao dịch, loại bỏ giao dịch cũ. |
+| 6 | **WebSocket chưa có reconnection logic** | Nếu kết nối WebSocket bị đứt, client không tự động kết nối lại. | Thêm exponential backoff reconnection trong `useWebSocket.js`. |
 
 ### 11.3. Hạn chế về tính năng
 
 | # | Hạn chế | Mô tả | Hướng khắc phục |
 |---|---------|-------|-----------------|
-| 8 | **Chưa hỗ trợ Smart Contract** | Hệ thống chỉ hỗ trợ giao dịch chuyển tiền đơn giản, chưa có smart contract. | Tích hợp EVM đơn giản hoặc script engine. |
-| 9 | **Chưa có cơ chế phí giao dịch** | Miner không nhận được phí khi đào block, dễ bị spam. | Thêm trường `fee` vào giao dịch và thưởng cho miner. |
-| 10 | **Chưa hỗ trợ nhiều loại tài sản** | Chỉ có 1 loại coin duy nhất, chưa hỗ trợ token ERC-20. | Xây dựng lớp token layer phía trên blockchain. |
+| 7 | **Chưa hỗ trợ Smart Contract** | Hệ thống chỉ hỗ trợ giao dịch chuyển tiền đơn giản, chưa có smart contract. | Tích hợp EVM đơn giản hoặc script engine. |
+| 8 | **Chưa có cơ chế phí giao dịch** | Miner không nhận được phí khi đào block, dễ bị spam. | Thêm trường `fee` vào giao dịch và thưởng cho miner. |
+| 9 | **Chưa hỗ trợ nhiều loại tài sản** | Chỉ có 1 loại coin duy nhất, chưa hỗ trợ token ERC-20. | Xây dựng lớp token layer phía trên blockchain. |
 
 ### 11.4. Hạn chế về kiểm thử
 
 | # | Hạn chế | Mô tả | Hướng khắc phục |
 |---|---------|-------|-----------------|
-| 11 | **Test coverage ~65%** | Chưa bao phủ hết các nhánh code (đặc biệt là error handling). | Bổ sung test cho các edge cases, hướng tới 90%+. |
-| 12 | **Chưa có integration test** | Unit test đã có nhưng chưa test tích hợp toàn hệ thống (client ↔ server ↔ WebSocket). | Thêm integration test với Vitest + Playwright. |
-| 13 | **Chưa test trên nhiều trình duyệt** | Chỉ test trên Chrome, chưa test Firefox/Safari/Edge. | Cross-browser testing với BrowserStack. |
+| 10 | **Test coverage ~65%** | Chưa bao phủ hết các nhánh code (đặc biệt là error handling). | Bổ sung test cho các edge cases, hướng tới 90%+. |
+| 11 | **Chưa có integration test** | Unit test đã có nhưng chưa test tích hợp toàn hệ thống (client ↔ server ↔ WebSocket). | Thêm integration test với Vitest + Playwright. |
+| 12 | **Chưa test trên nhiều trình duyệt** | Chỉ test trên Chrome, chưa test Firefox/Safari/Edge. | Cross-browser testing với BrowserStack. |
 
 ### 11.5. Tổng kết
 
 Dù còn nhiều hạn chế, dự án đã đạt được mục tiêu chính:
 - ✅ Mô phỏng thành công 4 kịch bản tấn công.
-- ✅ Chứng minh được tính bảo mật của blockchain trước 3/4 kịch bản (Tx Tampering, Block Tampering, Fork).
-- ✅ Xây dựng nền tảng vững chắc để phát triển tiếp trong tương lai.
+- ✅ Chứng minh được tính bảo mật của blockchain trước 4/4 kịch bản (Tx Tampering, Block Tampering, Double Spending, Fork).
+- ✅ Vận hành thực tế hệ thống với Web UI trực quan và mạng phân tán Multi-Node.
 
 Các hạn chế nêu trên sẽ là **định hướng cho các phiên bản tiếp theo** của dự án.
 
