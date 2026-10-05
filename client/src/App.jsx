@@ -187,9 +187,7 @@ function TransactionsPanel({ transactions }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
-<<<<<<< HEAD
   const [showChat, setShowChat] = useState(false);                      
-=======
   const [showChat, setShowChat] = useState(false);
 >>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
@@ -202,21 +200,18 @@ function App() {
   const handleNavigate = (label) => {
     setActiveSection(label);
     const targetMap = {
-<<<<<<< HEAD
       Dashboard: "dashboard-overview",
       Blockchain: "blockchain-tools",
       Transactions: "transactions",
       Mining: "blockchain-tools",
       "Merkle Tree": "merkle-tree-tab",
       "Network Nodes": "network-status",
-=======
       Dashboard:        "dashboard-overview",
       Blockchain:       "blockchain-tools",
       Transactions:     "transactions",
       Mining:           "pow-tool",              
       "Merkle Tree":    "merkle-tree-tab",
       "Network Nodes":  "network-status",
->>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
     };
     const target = document.getElementById(targetMap[label] || "dashboard-overview");
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -230,7 +225,6 @@ function App() {
   return (
     <MainLayout activeItem={activeSection} onNavigate={handleNavigate} connection={connection}>
       <div className="dashboard" id="dashboard-overview">
-<<<<<<< HEAD
         <header className="page-header">
           <div>
             <span className="page-label">BLOCKCHAIN SIMULATOR / CONTROL ROOM</span>
@@ -367,7 +361,6 @@ function App() {
         </div>
       )}
       {/* ========================================================== */}
-=======
 
         <section id="blockchain-tools" className="tool-section">
           <div className="section-heading">
@@ -425,7 +418,6 @@ function App() {
         </section>
       </div>
 
->>>>>>> 87c7b4d (fix(nav): correct sidebar scroll targets for Mining)
     </MainLayout>
   );
 }
