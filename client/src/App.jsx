@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";                       
 import MainLayout from "./layouts/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
 import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
 import MempoolManager from "./modules/blockchain/MempoolManager";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
+import MerkleTree from "./modules/crypto/MerkleTreeVisualizer.jsx";
+import ChatBot from "./components/ChatBot";                           
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
 import Button from "./components/Button";
@@ -185,6 +187,7 @@ function TransactionsPanel({ transactions }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
+  const [showChat, setShowChat] = useState(false);                      
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
   const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
 
@@ -199,6 +202,7 @@ function App() {
       Blockchain: "blockchain-tools",
       Transactions: "transactions",
       Mining: "blockchain-tools",
+      "Merkle Tree": "merkle-tree-tab",
       "Network Nodes": "network-status",
     };
     const target = document.getElementById(targetMap[label] || "dashboard-overview");
@@ -308,7 +312,47 @@ function App() {
             </Card>
           </div>
         </section>
+        <section id="merkle-tree-tab" className="tool-section merkle-tab-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">MERKLE LAB</span>
+              <h2>Mô phỏng flow Cây Merkle</h2>
+              <p>Khám phá cách giao dịch được băm và ghép thành Merkle Root.</p>
+            </div>
+          </div>
+          <div className="dashboard-panel merkle-panel">
+            <MerkleTree />
+          </div>
+        </section>
+
       </div>
+
+      {/* ==================== CHATBOT FLOATING ==================== */}      
+      <button
+        className="chat-fab"
+        onClick={() => setShowChat((v) => !v)}
+        aria-label="Mở trợ lý AI"
+        title="Trợ lý Blockchain AI"
+      >
+        {showChat ? "✕" : "💬"}
+      </button>
+
+      {showChat && (
+        <div className="chat-panel">
+          <div className="chat-header">
+            <span>🤖 Trợ lý Blockchain AI</span>
+            <button
+              className="chat-close"
+              onClick={() => setShowChat(false)}
+              aria-label="Đóng chat"
+            >
+              ✕
+            </button>
+          </div>
+          <ChatBot nodeStatus={nodeStatus} />
+        </div>
+      )}
+      {/* ========================================================== */}
     </MainLayout>
   );
 }

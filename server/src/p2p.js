@@ -33,7 +33,7 @@ class P2PServer {
    * @param {(line:string)=>void} [opts.onLog]  Callback log — server.js in ra console / lưu buffer cho LiveLogViewer
    * @param {()=>object} [opts.getSnapshot]  Snapshot gửi cho client browser khi bắt tay
    */
-  constructor({ p2pPort, blockchain, onLog, getSnapshot }) {
+  constructor({ p2pPort, server, blockchain, onLog, getSnapshot }) {
     this.p2pPort = p2pPort;
     this.server = server;
     this.blockchain = blockchain;

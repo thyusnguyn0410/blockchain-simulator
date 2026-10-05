@@ -192,7 +192,7 @@ export default function BlockHeaderViewer() {
             {/* DÒNG DỮ LIỆU: TỰ ĐỘNG SỬA TRỘM KHI NHẬP/XÓA */}
             <div style={styles.fieldGroup}>
               <label style={{ ...styles.label, color: selectedIndex === 0 ? '#9ca3af' : '#f59e0b', fontWeight: 'bold' }}>
-                DỮ LIỆU {selectedIndex === 0 && "(Cố định - Không thể sửa)"}
+                DỮ LIỆU {selectedIndex === 0}
               </label>
               <input
                 type="text"

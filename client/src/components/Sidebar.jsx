@@ -3,6 +3,7 @@ const menuItems = [
   { label: "Blockchain", icon: "◇" },
   { label: "Transactions", icon: "⇄" },
   { label: "Mining", icon: "⛏" },
+  { label: "Merkle Tree", icon: "⌘" },
   { label: "Network Nodes", icon: "◎" },
 ];
 
