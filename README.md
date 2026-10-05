@@ -36,6 +36,10 @@
 - 4 kịch bản tấn công mô phỏng bảo mật.
 
 **Công nghệ:** React 19 + Vite, Node.js + WebSocket, crypto-js, elliptic, Vitest.
+### 1.1. Demo trực tuyến
+
+- 🌐 **Live Web App:** [https://blockchain-simulator-five.vercel.app](https://blockchain-simulator-five.vercel.app)
+- 🖥️ **Backend Node:** [https://blockchain-sim-hub.onrender.com](https://blockchain-sim-hub.onrender.com)
 
 ## 2. Yêu cầu hệ thống
 
