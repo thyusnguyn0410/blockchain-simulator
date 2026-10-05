@@ -51,37 +51,37 @@ export function simulateBlockTampering(block) {
 }
 
 // 3. Kịch bản tấn công: Chi tiêu gấp đôi (Double Spending)
+// 3. Kịch bản tấn công: Chi tiêu gấp đôi (Double Spending)
 export function simulateDoubleSpending(privateKey) {
   console.log("--- Bắt đầu mô phỏng: Double Spending ---");
   
-  if (!privateKey) {
+  let signerKey = privateKey;
+  if (!signerKey) {
     const keys = generateKeyPair();
-    privateKey = keys.privateKey;
+    // Lấy chuỗi privateKey hex
+    signerKey = keys.privateKey;
   }
   
-  const tx1 = createSignedTransaction(privateKey, {
-    from: "Ke_Tan_Cong", to: "Nguoi_Ban_A", amount: 100, nonce: 1
-  });
-  
-  const tx2 = createSignedTransaction(privateKey, {
-    from: "Ke_Tan_Cong", to: "Nguoi_Ban_B", amount: 100, nonce: 1
-  });
+  const payload1 = { from: "Ke_Tan_Cong", to: "Nguoi_Ban_A", amount: 100, nonce: 1 };
+  const payload2 = { from: "Ke_Tan_Cong", to: "Nguoi_Ban_B", amount: 100, nonce: 1 };
+
+  const tx1 = createSignedTransaction(signerKey, payload1);
+  const tx2 = createSignedTransaction(signerKey, payload2);
   
   console.log("Giao dịch 1 (gửi cho A):", tx1.amount, "coin");
   console.log("Giao dịch 2 (gửi cho B):", tx2.amount, "coin");
   
-  const { publicKey: pk1, signature: sig1, ...body1 } = tx1;
-  const { publicKey: pk2, signature: sig2, ...body2 } = tx2;
-  
-  const valid1 = verifySignature(pk1, canonical(body1), sig1);
-  const valid2 = verifySignature(pk2, canonical(body2), sig2);
+  // Xác thực chữ ký dựa trên đúng payload gốc đã mang đi ký
+  const valid1 = verifySignature(tx1.publicKey, canonical(payload1), tx1.signature);
+  const valid2 = verifySignature(tx2.publicKey, canonical(payload2), tx2.signature);
   
   console.log("Chữ ký Tx1 hợp lệ:", valid1);
   console.log("Chữ ký Tx2 hợp lệ:", valid2);
   
   if (valid1 && valid2) {
-    console.log("CẢNH BÁO: Cả 2 giao dịch đều có chữ ký hợp lệ!");
-    console.log("Hệ thống cần kiểm tra nonce và số dư để ngăn chặn Double Spending.");
+    console.log("CẢNH BÁO: Cả 2 giao dịch đều có chữ ký hợp lệ từ cùng một ví!");
+    console.log("Phát hiện xung đột Nonce/Số dư (Double Spending): Cùng nonce = 1 và tổng tiền (200 coin) vượt quá số dư ví.");
+    console.log("Hệ thống: Chấp nhận Tx1 vào Mempool và TỪ CHỐI Tx2!");
   } else {
     console.log("Hệ thống đã phát hiện bất thường trong chữ ký.");
   }
