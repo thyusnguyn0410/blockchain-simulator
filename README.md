@@ -15,11 +15,17 @@
 
 **PHẦN B — BÁO CÁO KỸ THUẬT**
 5. [Kiến trúc hệ thống](#5-kiến-trúc-hệ-thống)
+
 6. [Giải thích thiết kế](#6-giải-thích-thiết-kế)
+
 7. [Kịch bản tấn công](#7-kịch-bản-tấn-công)
+
 8. [Kết quả kiểm thử](#8-kết-quả-kiểm-thử)
+
 9. [Câu hỏi thảo luận](#9-câu-hỏi-thảo-luận)
+
 10. [Thành viên nhóm](#10-thành-viên-nhóm)
+
 11. [Giới hạn đã biết](#11-giới-hạn-đã-biết-known-limitations)
 
 ---
