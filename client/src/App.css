@@ -1023,3 +1023,327 @@
     white-space: nowrap;
   }
 }
+/* ================= BLOCK HEADER VIEWER ================= */
+.bhv-container {
+  padding: 16px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--theme-text);
+}
+
+.bhv-header {
+  margin-bottom: 20px;
+}
+
+.bhv-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bhv-search-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--theme-surface-solid);
+  border: 1px solid var(--theme-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.bhv-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--theme-text-strong);
+}
+
+.bhv-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: var(--theme-text-muted);
+}
+
+.bhv-action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.bhv-btn-reset {
+  background: var(--theme-surface-raised);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bhv-btn-reset:hover {
+  background: var(--theme-hover);
+  border-color: var(--theme-border-strong);
+}
+
+.bhv-btn-fix {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.bhv-btn-fix:hover {
+  background: rgba(59, 130, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+/* GRID */
+.bhv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 24px;
+}
+
+@media (max-width: 900px) {
+  .bhv-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* PANEL */
+.bhv-panel {
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.bhv-panel-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--theme-text-strong);
+}
+
+.bhv-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.bhv-detail-header .bhv-panel-title {
+  margin: 0;
+}
+
+/* BLOCK LIST */
+.bhv-block-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bhv-block-card {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-deep);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bhv-block-card:hover {
+  border-color: var(--theme-border-strong);
+  transform: translateY(-1px);
+}
+
+.bhv-block-card-selected {
+  border-color: var(--accent-cyan) !important;
+  background: var(--theme-surface-raised) !important;
+  box-shadow: 0 0 0 1px var(--accent-cyan);
+}
+
+.bhv-block-card-invalid {
+  border-color: var(--accent-red);
+}
+
+.bhv-block-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.bhv-block-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bhv-block-card-icon {
+  color: var(--accent-cyan);
+}
+
+.bhv-block-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--theme-text-strong);
+}
+
+.bhv-block-card-status {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bhv-status-valid { color: var(--accent-green); }
+.bhv-status-invalid { color: var(--accent-red); }
+.bhv-status-warning { color: var(--accent-orange); }
+
+.bhv-truncate-hash {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 12px;
+  color: var(--theme-text-muted);
+  margin: 8px 0;
+}
+
+.bhv-block-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--theme-text-subtle);
+  flex-wrap: wrap;
+}
+
+.bhv-meta-diff {
+  color: var(--accent-orange);
+  font-weight: 700;
+}
+
+/* FIELDS */
+.bhv-field-group {
+  margin-bottom: 12px;
+}
+
+.bhv-label {
+  display: block;
+  font-size: 12px;
+  color: var(--theme-text-muted);
+  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bhv-label-disabled {
+  color: var(--theme-text-subtle);
+}
+
+.bhv-label-warning {
+  color: var(--accent-orange);
+}
+
+.bhv-label-error {
+  color: var(--accent-red);
+}
+
+.bhv-value-box {
+  background: var(--theme-surface-solid);
+  border: 1px solid var(--theme-border);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--theme-text);
+  word-break: break-all;
+}
+
+.bhv-value-mono {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.bhv-value-error {
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+}
+
+.bhv-value-warning {
+  color: var(--accent-orange);
+  font-weight: 700;
+}
+
+/* INPUT */
+.bhv-input-data {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  background: var(--theme-surface-solid);
+  border: 1px solid var(--accent-orange);
+  color: var(--theme-text-strong);
+  transition: all 0.15s ease;
+}
+
+.bhv-input-data:focus {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.bhv-input-data-disabled {
+  background: var(--theme-surface-raised);
+  border-color: var(--theme-border);
+  color: var(--theme-text-subtle);
+  cursor: not-allowed;
+}
+
+/* MISMATCH BOX */
+.bhv-mismatch-box {
+  border: 1px solid var(--accent-red);
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.bhv-mismatch-note {
+  color: var(--accent-red);
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+/* STATUS BADGE */
+.bhv-status-badge {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.bhv-status-badge-valid {
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--accent-green);
+  border-color: var(--accent-green);
+}
+
+.bhv-status-badge-invalid {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+}
