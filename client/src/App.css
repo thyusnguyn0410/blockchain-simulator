@@ -1885,20 +1885,22 @@
   font-size: 14px;
 }
 
+/* ===== WORKSPACE: 2 CỘT ===== */
 .merkle-workspace {
   display: grid;
-  grid-template-columns: 260px 1fr 300px;
+  grid-template-columns: 260px 1fr;
   gap: 16px;
   align-items: start;
+  position: relative;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .merkle-workspace {
     grid-template-columns: 1fr;
   }
 }
 
-/* Cột trái: Transactions */
+/* ===== CỘT TRÁI: TRANSACTIONS ===== */
 .merkle-transactions {
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
@@ -1907,6 +1909,9 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: fit-content;
+  position: sticky;
+  top: 16px;
 }
 
 .merkle-transactions h3 {
@@ -2058,13 +2063,13 @@
   word-break: break-all;
 }
 
-/* Cột giữa: Tree stage */
+/* ===== CỘT PHẢI: TREE STAGE (chiếm toàn bộ phần còn lại) ===== */
 .merkle-tree-stage {
   background: var(--theme-surface);
   border: 1px solid var(--theme-border);
   border-radius: 12px;
   padding: 20px;
-  min-height: 400px;
+  min-height: 540px;
   position: relative;
   overflow: auto;
 }
@@ -2162,14 +2167,14 @@
 .merkle-levels {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
   transition: transform 0.2s ease;
 }
 
 .merkle-level {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
@@ -2183,7 +2188,7 @@
 
 .merkle-level-nodes {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -2199,17 +2204,14 @@
   border: 2px solid var(--theme-border);
   cursor: pointer;
   transition: all 0.15s ease;
-  min-width: 120px;
+  min-width: 130px;
   position: relative;
 }
 
-.merkle-node:hover {
-  border-color: var(--accent-cyan);
-  transform: translateY(-2px);
-}
-
+.merkle-node:hover,
 .merkle-node.selected {
   border-color: var(--accent-purple);
+  transform: translateY(-2px);
   box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
 }
 
@@ -2234,19 +2236,78 @@
   text-transform: uppercase;
 }
 
-/* Cột phải: Node details */
-.merkle-node-details {
+/* ===== PANEL THÔNG TIN — FLOATING TRÊN CÙNG BÊN PHẢI ===== */
+.merkle-node-details-floating {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 340px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
   background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
+  border: 1px solid var(--theme-border-strong);
   border-radius: 12px;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  position: sticky;
-  top: 16px;
+  z-index: 50;
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.15), 0 12px 24px rgba(0, 0, 0, 0.1);
+  animation: merkleDetailSlide 0.2s ease;
 }
 
+[data-theme="light"] .merkle-node-details-floating {
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.08), 0 12px 24px rgba(15, 23, 42, 0.05);
+}
+
+@keyframes merkleDetailSlide {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .merkle-node-details-floating {
+    position: fixed;
+    top: auto;
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-height: 60vh;
+  }
+}
+
+/* Nút đóng panel */
+.merkle-detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-raised);
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.merkle-detail-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+/* Nội dung panel */
 .merkle-detail-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -2259,13 +2320,13 @@
   align-self: flex-start;
 }
 
-.merkle-node-details h3 {
+.merkle-node-details-floating h3 {
   margin: 0;
   color: var(--theme-text-strong);
   font-size: 15px;
 }
 
-.merkle-node-details p {
+.merkle-node-details-floating p {
   margin: 0;
   color: var(--theme-text-muted);
   font-size: 12px;
@@ -2338,171 +2399,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-/* Modal */
-.merkle-detail-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: grid;
-  place-items: center;
-  z-index: 999;
-  padding: 20px;
-}
-
-.merkle-detail-modal {
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 480px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  position: relative;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
-}
-
-.merkle-modal-close {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--theme-text-muted);
-  cursor: pointer;
-  font-size: 18px;
-}
-
-.merkle-modal-close:hover {
-  background: var(--theme-hover);
-  color: var(--theme-text-strong);
-}
-
-.merkle-modal-caption {
-  font-size: 10px;
-  color: var(--theme-text-muted);
-  letter-spacing: 0.08em;
-  font-weight: 700;
-}
-
-.merkle-detail-modal h3 {
-  margin: 0;
-  color: var(--theme-text-strong);
-  font-size: 18px;
-}
-
-.merkle-modal-hash {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 12px;
-  color: var(--accent-cyan);
-  background: var(--theme-surface-deep);
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  word-break: break-all;
-}
-
-.merkle-modal-process {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 10px;
-  background: var(--theme-surface-deep);
-  border: 1px solid var(--theme-border);
-}
-
-.merkle-modal-section-title {
-  font-size: 10px;
-  color: var(--theme-text-muted);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.merkle-modal-inputs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  justify-content: center;
-}
-
-.merkle-modal-inputs code {
-  flex: 1;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 10px;
-  padding: 8px;
-  border-radius: 6px;
-  background: var(--theme-surface-raised);
-  color: var(--theme-text);
-  text-align: center;
-  word-break: break-all;
-}
-
-.merkle-modal-inputs b {
-  color: var(--accent-purple);
-  font-size: 16px;
-}
-
-.merkle-modal-arrow {
-  text-align: center;
-  color: var(--accent-purple);
-  font-size: 16px;
-}
-
-.merkle-modal-sha,
-.merkle-modal-result {
-  text-align: center;
-  padding: 10px;
-  border-radius: 8px;
-  font-family: "JetBrains Mono", monospace;
-  font-size: 12px;
-  background: var(--theme-surface-raised);
-  color: var(--theme-text);
-}
-
-.merkle-modal-sha {
-  background: rgba(139, 92, 246, 0.15);
-  color: var(--accent-purple);
-}
-
-.merkle-modal-result {
-  background: rgba(34, 211, 238, 0.15);
-  color: var(--accent-cyan);
-  font-weight: 700;
-}
-
-.merkle-modal-explanation {
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--theme-surface-deep);
-  border: 1px solid var(--theme-border);
-}
-
-.merkle-modal-explanation strong {
-  display: block;
-  font-size: 10px;
-  color: var(--theme-text-muted);
-  letter-spacing: 0.08em;
-  margin-bottom: 6px;
-}
-
-.merkle-modal-explanation p {
-  margin: 0;
-  color: var(--theme-text);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-/* Modal badge inside */
-.merkle-detail-badge {
-  align-self: flex-start;
 }
 /* ================= MEMPOOL MANAGER ================= */
 .mp-container {
