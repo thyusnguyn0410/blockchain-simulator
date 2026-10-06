@@ -215,8 +215,8 @@ blockchain-simulator/
 | Crypto | SHA-256, ECDSA, Merkle Tree | Trương Hân |
 | Blockchain Core | Block, Chain, PoW, Mempool | Trần Thị Anh Thư |
 | Network | WebSocket, Broadcast, Consensus | Nguyễn Thị Minh Thúy |
-| Frontend UI | Layout, Components, Framer | Nguyễn Thị Kim Thùy |
-| Frontend Logic | WebSocket, State, Recharts | Đoàn Tú Uyên |
+| Frontend UI | Layout, Components, Framer | Đoàn Tú Uyên |
+| Frontend Logic | WebSocket, State, Recharts | Nguyễn Thị Kim Thùy |
 | QA/Test | Kịch bản tấn công, Unit Test | Nguyễn Thị Cẩm Tú |
 
 ---
