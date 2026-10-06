@@ -374,23 +374,13 @@ function App() {
     >
       <div className="dashboard" id="dashboard-overview">
         <header className="page-header">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <span className="page-label">{t.controlRoom}</span>
-              <button
-                type="button"
-                onClick={handleLangToggle}
-                className="lang-toggle-badge px-2 py-0.5 text-xs font-semibold rounded border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
-                title="Switch Language"
-              >
-                🌐 {lang.toUpperCase()}
-              </button>
-            </div>
-            <h1>{t.dashboardTitle}</h1>
-            <p>{t.dashboardDesc}</p>
-          </div>
-          <Button onClick={handleNewSimulation}>{t.refreshBtn}</Button>
-        </header>
+  <div>
+    <span className="page-label">{t.controlRoom}</span>
+    <h1>{t.dashboardTitle}</h1>
+    <p>{t.dashboardDesc}</p>
+  </div>
+  <Button onClick={handleNewSimulation}>{t.refreshBtn}</Button>
+</header>
 
         <section className="stats-grid" aria-label="Network metrics">
           <MetricCard
