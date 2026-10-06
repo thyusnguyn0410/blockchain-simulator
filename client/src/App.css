@@ -3224,3 +3224,27 @@
 .mp-amount-out { color: var(--accent-red); font-weight: 700; }
 .mp-amount-in { color: var(--accent-green); font-weight: 700; }
 .mp-amount-reward { color: var(--accent-orange); font-weight: 700; }
+/* ===== FIX SPACING cho MERKLE TAB ===== */
+.merkle-tab-section {
+  scroll-margin-top: 90px;
+  gap: 28px;        /* tăng gap giữa heading và panel */
+}
+
+.merkle-tab-section .section-heading {
+  padding: 10px 0 8px;   /* tăng bottom padding */
+  margin-bottom: 4px;
+}
+
+.merkle-tab-section .section-heading p {
+  margin: 12px 0 0;      /* tăng khoảng cách giữa h2 và p */
+  line-height: 1.6;
+}
+
+/* Panel Merkle — thêm padding-top để nội dung bên trong không sát viền */
+.dashboard-panel.merkle-panel {
+  overflow: hidden;
+  padding: 0;
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border);
+  border-radius: 16px;
+}
