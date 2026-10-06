@@ -3224,27 +3224,32 @@
 .mp-amount-out { color: var(--accent-red); font-weight: 700; }
 .mp-amount-in { color: var(--accent-green); font-weight: 700; }
 .mp-amount-reward { color: var(--accent-orange); font-weight: 700; }
-/* ===== FIX SPACING cho MERKLE TAB ===== */
-.merkle-tab-section {
-  scroll-margin-top: 90px;
-  gap: 28px;        /* tăng gap giữa heading và panel */
+/* ===== FIX CỨNG cho MERKLE TAB ===== */
+section.tool-section.merkle-tab-section {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 36px !important;
+  padding-top: 8px !important;
 }
 
-.merkle-tab-section .section-heading {
-  padding: 10px 0 8px;   /* tăng bottom padding */
-  margin-bottom: 4px;
+section.tool-section.merkle-tab-section .section-heading {
+  padding: 12px 0 20px !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid var(--theme-border) !important;
 }
 
-.merkle-tab-section .section-heading p {
-  margin: 12px 0 0;      /* tăng khoảng cách giữa h2 và p */
-  line-height: 1.6;
+section.tool-section.merkle-tab-section .section-heading h2 {
+  margin: 0 0 8px !important;
+  line-height: 1.3 !important;
 }
 
-/* Panel Merkle — thêm padding-top để nội dung bên trong không sát viền */
-.dashboard-panel.merkle-panel {
-  overflow: hidden;
-  padding: 0;
-  background: var(--theme-surface);
-  border: 1px solid var(--theme-border);
-  border-radius: 16px;
+section.tool-section.merkle-tab-section .section-heading p {
+  margin: 0 !important;
+  padding-bottom: 4px !important;
+  line-height: 1.7 !important;
+  color: var(--theme-text-muted) !important;
+}
+
+section.tool-section.merkle-tab-section .merkle-panel {
+  margin-top: 0 !important;
 }
