@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";                       
+import React, { useMemo, useState } from "react";
 import MainLayout from "./layouts/MainLayout";
 import Sha256Visualizer from "./modules/crypto/Sha256Visualizer";
 import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
 import MempoolManager from "./modules/blockchain/MempoolManager";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
-import ChatBot from "./components/ChatBot";                           
+import MerkleTree from "./modules/crypto/MerkleTreeVisualizer.jsx";
+import ChatBot from "./components/ChatBot.jsx";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
 import Button from "./components/Button";
@@ -186,7 +187,9 @@ function TransactionsPanel({ transactions }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
-  const [showChat, setShowChat] = useState(false);                      
+  const [showChat, setShowChat] = useState(false);
+  const [theme, setTheme] = useState("dark");
+
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
   const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
 
@@ -200,7 +203,8 @@ function App() {
       Dashboard: "dashboard-overview",
       Blockchain: "blockchain-tools",
       Transactions: "transactions",
-      Mining: "blockchain-tools",
+      Mining: "pow-tool",
+      "Merkle Tree": "merkle-tree-tab",
       "Network Nodes": "network-status",
     };
     const target = document.getElementById(targetMap[label] || "dashboard-overview");
@@ -212,8 +216,18 @@ function App() {
     refresh();
   };
 
+  const handleThemeToggle = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
+
   return (
-    <MainLayout activeItem={activeSection} onNavigate={handleNavigate} connection={connection}>
+    <MainLayout
+      activeItem={activeSection}
+      onNavigate={handleNavigate}
+      connection={connection}
+      theme={theme}
+      onThemeToggle={handleThemeToggle}
+    >
       <div className="dashboard" id="dashboard-overview">
         <header className="page-header">
           <div>
@@ -280,39 +294,63 @@ function App() {
           </div>
 
           <div className="tool-grid">
-            <Card
-              title="SHA-256 visualizer"
-              description="Hashing, avalanche effect, and proof-of-work exploration"
-              className="tool-card"
-            >
-              <Sha256Visualizer />
-            </Card>
-            <Card
-              title="Block header viewer"
-              description="Inspect, verify, and safely demonstrate chain integrity"
-              className="tool-card"
-            >
-              <BlockHeaderViewer />
-            </Card>
-            <Card
-              title="Mempool manager"
-              description="Create signed transactions and mine them into the local chain"
-              className="tool-card"
-            >
-              <MempoolManager apiUrl={activeUrl} />
-            </Card>
-            <Card
-              title="Proof of work simulator"
-              description="Explore mining difficulty and chain reinforcement"
-              className="tool-card"
-            >
-              <ProofOfWorkSimulator />
-            </Card>
+            <div id="sha256-tool">
+              <Card
+                title="SHA-256 visualizer"
+                description="Hashing, avalanche effect, and proof-of-work exploration"
+                className="tool-card"
+              >
+                <Sha256Visualizer />
+              </Card>
+            </div>
+
+            <div id="blockheader-tool">
+              <Card
+                title="Block header viewer"
+                description="Inspect, verify, and safely demonstrate chain integrity"
+                className="tool-card"
+              >
+                <BlockHeaderViewer />
+              </Card>
+            </div>
+
+            <div id="mempool-tool">
+              <Card
+                title="Mempool manager"
+                description="Create signed transactions and mine them into the local chain"
+                className="tool-card"
+              >
+                <MempoolManager apiUrl={activeUrl} />
+              </Card>
+            </div>
+
+            <div id="pow-tool">
+              <Card
+                title="Proof of work simulator"
+                description="Explore mining difficulty and chain reinforcement"
+                className="tool-card"
+              >
+                <ProofOfWorkSimulator />
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        <section id="merkle-tree-tab" className="tool-section merkle-tab-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">MERKLE LAB</span>
+              <h2>Mô phỏng flow Cây Merkle</h2>
+              <p>Khám phá cách giao dịch được băm và ghép thành Merkle Root.</p>
+            </div>
+          </div>
+          <div className="dashboard-panel merkle-panel">
+            <MerkleTree />
           </div>
         </section>
       </div>
 
-      {/* ==================== CHATBOT FLOATING ==================== */}      
+      {/* ==================== CHATBOT FLOATING ==================== */}
       <button
         className="chat-fab"
         onClick={() => setShowChat((v) => !v)}
