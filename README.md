@@ -374,7 +374,7 @@ Tăng hashrate mạng lưới, chuyển sang PoS, dùng Finality Checkpoints.
 ## 10. Thành viên nhóm
 
 | STT | Họ và tên | MSSV | GitHub | Vai trò |
-|-----|-----------|--------|---------|
+|-----|-----------|--------|---------|--------|
 | 1 | Nguyễn Thị Minh Thúy | 031340240029 |thyusnguyn0410 | Network & Integration Lead |
 | 2 | Trương Hân | 031340240006 |hantruong-kbc |Crypto Engineer |
 | 3 | Trần Thị Anh Thư | 031340240031 | tta-thu | Blockchain Core Engineer |
