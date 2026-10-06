@@ -1,20 +1,77 @@
-/* Additional page-level UI */
-:root, [data-theme="dark"] {
-  --bg-primary: #020617;
-  --bg-secondary: #0f172a;
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --border-color: rgba(148, 163, 184, 0.13);
-  /* ... các biến khác ... */
+/* Áp dụng biến nền cho Layout chính và Sidebar */
+.app-layout,
+.dashboard-container,
+.main-content,
+.dashboard {
+  background-color: var(--bg-app) !important;
+  color: var(--text-primary) !important;
 }
 
-[data-theme="light"] {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --border-color: rgba(15, 23, 42, 0.1);
-  /* ... các biến khác ... */
+.sidebar,
+aside.sidebar,
+.navbar,
+header.navbar {
+  background-color: var(--bg-sidebar) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Đồng bộ các Card thống kê, khung công cụ */
+.metric-card,
+.card,
+.tool-card,
+.activity-card,
+.transactions-panel,
+.merkle-panel,
+.dashboard-panel,
+article {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Tiêu đề & nội dung chữ */
+h1, h2, h3, h4, strong, .brand strong {
+  color: var(--text-primary) !important;
+}
+
+p, span, small, .page-header p, .metric-card small, .metric-card-heading span {
+  color: var(--text-secondary) !important;
+}
+
+.page-label {
+  color: var(--accent-cyan) !important;
+}
+
+/* Các mục item trong Sidebar */
+.nav-item,
+.sidebar-link {
+  color: var(--text-secondary) !important;
+}
+
+.nav-item.active,
+.nav-item:hover,
+.sidebar-link.active {
+  background-color: var(--bg-card-inner) !important;
+  color: var(--accent-cyan) !important;
+}
+
+/* Khung bảng và input */
+table, tr, td, th {
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+th {
+  background-color: var(--bg-card-inner) !important;
+}
+
+input, textarea, select {
+  background-color: var(--bg-card-inner) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
 }
 .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; background: rgba(52,211,153,.12); color: #34d399; }
 .status-badge.success::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
