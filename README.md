@@ -14,12 +14,19 @@
 4. [Cấu trúc thư mục](#4-cấu-trúc-thư-mục)
 
 **PHẦN B — BÁO CÁO KỸ THUẬT**
+
 5. [Kiến trúc hệ thống](#5-kiến-trúc-hệ-thống)
+
 6. [Giải thích thiết kế](#6-giải-thích-thiết-kế)
+
 7. [Kịch bản tấn công](#7-kịch-bản-tấn-công)
+
 8. [Kết quả kiểm thử](#8-kết-quả-kiểm-thử)
+
 9. [Câu hỏi thảo luận](#9-câu-hỏi-thảo-luận)
+
 10. [Thành viên nhóm](#10-thành-viên-nhóm)
+
 11. [Giới hạn đã biết](#11-giới-hạn-đã-biết-known-limitations)
 
 ---
@@ -366,14 +373,14 @@ Tăng hashrate mạng lưới, chuyển sang PoS, dùng Finality Checkpoints.
 
 ## 10. Thành viên nhóm
 
-| STT | Họ và tên | GitHub | Vai trò |
-|-----|-----------|--------|---------|
-| 1 | Nguyễn Thị Minh Thúy | thyusnguyn0410 | Network & Integration Lead |
-| 2 | Trương Hân | hantruong-kbc | Crypto Engineer |
-| 3 | Trần Thị Anh Thư | tta-thu | Blockchain Core Engineer |
-| 4 | Đoàn Tú Uyên | 031340240038-droid | Frontend Integration Engineer |
-| 5 | Nguyễn Thị Kim Thùy | thuyhub | Frontend & UI/UX Engineer |
-| 6 | Nguyễn Thị Cẩm Tú | nguyenthicamtu-svg | QA, Attack Simulator & Documentation |
+| STT | Họ và tên | MSSV | GitHub | Vai trò |
+|-----|-----------|--------|---------|--------|
+| 1 | Nguyễn Thị Minh Thúy | 031340240029 |thyusnguyn0410 | Network & Integration Lead |
+| 2 | Trương Hân | 031340240006 |hantruong-kbc |Crypto Engineer |
+| 3 | Trần Thị Anh Thư | 031340240031 | tta-thu | Blockchain Core Engineer |
+| 4 | Đoàn Tú Uyên |031340240038 | 031340240038-droid | Frontend & UI/UX Engineer |
+| 5 | Nguyễn Thị Kim Thùy | 031340240028 |thuyhub | Frontend Integration Engineer |
+| 6 | Nguyễn Thị Cẩm Tú | 031340240036 | nguyenthicamtu-svg | QA, Attack Simulator & Documentation |
 
 ---
 ## 11. Giới hạn đã biết (Known Limitations)
