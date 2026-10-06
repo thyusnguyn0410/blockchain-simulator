@@ -91,7 +91,7 @@ async function callAI(prompt) {
           'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama-3.1-70b-versatile',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.6,
           max_tokens: 800,
@@ -114,7 +114,7 @@ async function callAI(prompt) {
   if (process.env.GEMINI_API_KEY) {
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
