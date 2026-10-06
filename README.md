@@ -366,14 +366,14 @@ Tăng hashrate mạng lưới, chuyển sang PoS, dùng Finality Checkpoints.
 
 ## 10. Thành viên nhóm
 
-| STT | Họ và tên | GitHub | Vai trò |
+| STT | Họ và tên | MSSV | GitHub | Vai trò |
 |-----|-----------|--------|---------|
-| 1 | Nguyễn Thị Minh Thúy | thyusnguyn0410 | Network & Integration Lead |
-| 2 | Trương Hân | hantruong-kbc | Crypto Engineer |
-| 3 | Trần Thị Anh Thư | tta-thu | Blockchain Core Engineer |
-| 4 | Đoàn Tú Uyên | 031340240038-droid | Frontend Integration Engineer |
-| 5 | Nguyễn Thị Kim Thùy | thuyhub | Frontend & UI/UX Engineer |
-| 6 | Nguyễn Thị Cẩm Tú | nguyenthicamtu-svg | QA, Attack Simulator & Documentation |
+| 1 | Nguyễn Thị Minh Thúy | 031340240029 |thyusnguyn0410 | Network & Integration Lead |
+| 2 | Trương Hân | 031340240006 |hantruong-kbc |Crypto Engineer |
+| 3 | Trần Thị Anh Thư | 031340240031 | tta-thu | Blockchain Core Engineer |
+| 4 | Đoàn Tú Uyên |031340240038 | 031340240038-droid | Frontend & UI/UX Engineer |
+| 5 | Nguyễn Thị Kim Thùy | 031340240028 |thuyhub | Frontend Integration Engineer |
+| 6 | Nguyễn Thị Cẩm Tú | 031340240036 | nguyenthicamtu-svg | QA, Attack Simulator & Documentation |
 
 ---
 ## 11. Giới hạn đã biết (Known Limitations)
