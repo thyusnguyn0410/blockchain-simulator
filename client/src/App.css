@@ -82,6 +82,25 @@
   --theme-hover: var(--bg-hover);
   --theme-shadow: var(--shadow-card);
 }
+/* Nút chuyển đổi Dark/Light mode trong suốt, không bị bệt trắng */
+.theme-toggle-button,
+.navbar button[aria-label*="theme"],
+.navbar button[title*="mode"] {
+  background: transparent !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-secondary) !important;
+  border-radius: 10px !important;
+  padding: 6px 10px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.theme-toggle-button:hover,
+.navbar button[aria-label*="theme"]:hover,
+.navbar button[title*="mode"]:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--accent-cyan) !important;
+}
 
 /* Base Utility & Badges */
 .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; background: rgba(52,211,153,.12); color: #34d399; }
