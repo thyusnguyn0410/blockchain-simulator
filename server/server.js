@@ -73,6 +73,72 @@ function log(message) {
   console.log(`[${NODE_ID}] ${message}`);
 }
 
+// ============ CACHE CHO CHATBOT ============
+const chatCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 phút
+
+// ============ HÀM GỌI AI VỚI FALLBACK ============
+async function callAI(prompt) {
+  const errors = [];
+
+  // 1. Thử Groq trước (nhanh nhất, ~0.5-2s)
+  if (process.env.GROQ_API_KEY) {
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-oss-120b",
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.6,
+          max_tokens: 800,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.choices?.[0]?.message?.content) {
+        log('🤖 AI trả lời qua Groq');
+        return data.choices[0].message.content;
+      }
+      errors.push(`Groq: ${data.error?.message || res.status}`);
+    } catch (e) {
+      errors.push(`Groq: ${e.message}`);
+    }
+  } else {
+    errors.push('Groq: chưa cấu hình GROQ_API_KEY');
+  }
+
+  // 2. Fallback: Gemini
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.6, maxOutputTokens: 800 },
+          }),
+        }
+      );
+      const data = await res.json();
+      if (res.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        log('🤖 AI trả lời qua Gemini');
+        return data.candidates[0].content.parts[0].text;
+      }
+      errors.push(`Gemini: ${data.error?.message || res.status}`);
+    } catch (e) {
+      errors.push(`Gemini: ${e.message}`);
+    }
+  } else {
+    errors.push('Gemini: chưa cấu hình GEMINI_API_KEY');
+  }
+
+  throw new Error(`Tất cả AI đều thất bại: ${errors.join(' | ')}`);
+}
 
 // ------------------------------- REST API -------------------------------
 const app = express();
@@ -86,13 +152,27 @@ app.use(cors({
 
 app.use(express.json({ limit: '128kb' }));
 
+// ============ ENDPOINT /api/chat ============
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, context } = req.body;
+    const { message, context } = req.body || {};
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Thiếu trường "message".' });
+    }
+
+    const userMsg = message.trim();
+
+    // Cache: câu hỏi + context giống hệt → trả ngay
+    const cacheKey = `${userMsg}|h${context?.height || 0}|m${context?.mempoolSize || 0}`;
+    const cached = chatCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      log(`⚡ Cache hit: "${userMsg.slice(0, 30)}..."`);
+      return res.json({ reply: cached.reply, cached: true });
+    }
 
     const systemInstruction = `Bạn là trợ lý Blockchain thông minh của dự án 
-    Blockchain Simulator. Trả lời ngắn gọn, dễ hiểu bằng tiếng Việt.
-    Khi được hỏi về dữ liệu blockchain hiện tại, hãy dùng context được cung cấp.
+Blockchain Simulator. Trả lời ngắn gọn (dưới 150 từ), dễ hiểu bằng tiếng Việt.
+Khi được hỏi về dữ liệu blockchain hiện tại, hãy dùng context được cung cấp.
 
 QUY TẮC ĐỊNH DẠNG:
 - KHÔNG dùng cú pháp LaTeX (không viết $\\rightarrow$, $\\Rightarrow$, $x^2$...).
@@ -108,29 +188,25 @@ Context hiện tại:
 - Difficulty: ${context?.difficulty || 2}
 - Node: ${context?.nodeId || 'unknown'}
 
-Câu hỏi: ${message}`;
+Câu hỏi: ${userMsg}`;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
-        }),
-      }
-    );
+    // Gọi AI với fallback Groq → Gemini
+    const reply = await callAI(prompt);
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'Gemini API error');
+    // Lưu cache
+    chatCache.set(cacheKey, { reply, ts: Date.now() });
+    if (chatCache.size > 100) {
+      // Xóa entry cũ nhất khi cache đầy
+      chatCache.delete(chatCache.keys().next().value);
+    }
 
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text
-      || 'Xin lỗi, tôi không thể trả lời lúc này.';
     res.json({ reply });
   } catch (error) {
     console.error('Chat error:', error.message);
-    res.status(500).json({ error: error.message });
+    res.status(503).json({
+      error: 'AI đang quá tải. Vui lòng thử lại sau 5 giây.',
+      detail: error.message,
+    });
   }
 });
 
@@ -138,7 +214,7 @@ app.get('/', (req, res) => res.json({
   name: 'Blockchain Simulator Node',
   nodeId: NODE_ID,
   educationalOnly: true,
-  endpoints: ['/status', '/blocks', '/mempool', '/logs', '/peers'],
+  endpoints: ['/status', '/blocks', '/mempool', '/logs', '/peers', '/api/chat'],
 }));
 
 /** GET /status - Kiểm tra trạng thái node */
