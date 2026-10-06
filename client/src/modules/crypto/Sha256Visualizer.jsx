@@ -25,10 +25,9 @@ const TABS = [
 ];
 
 // ============ HASH BLOCK (4x4 grid of 4-char chunks) ============
-function HashBlock({ hash, accent = '#a78bfa' }) {
+function HashBlock({ hash, accent = 'var(--accent-purple)' }) {
   if (!hash) return <div className="sha256-hash-empty">—</div>;
 
-  // Chia 64 ký tự thành 16 khối 4 ký tự
   const chunks = [];
   for (let i = 0; i < 64; i += 4) {
     chunks.push(hash.slice(i, i + 4));
@@ -52,42 +51,40 @@ function HashBlock({ hash, accent = '#a78bfa' }) {
 // ============ TAB: TƯƠNG TÁC ============
 function TabInteract({ shaInput, setShaInput, shaResult }) {
   return (
-    <>
-      <div className="sha256-section">
-        <div className="sha256-section-head">
-          <h3>Trình tạo mã băm SHA-256</h3>
-          <p>Nhập văn bản và xem mã băm SHA-256 cập nhật ngay tức thì</p>
-        </div>
-
-        <label className="sha256-label">VĂN BẢN ĐẦU VÀO</label>
-        <textarea
-          className="sha256-textarea"
-          value={shaInput}
-          onChange={(e) => setShaInput(e.target.value)}
-          rows={3}
-          placeholder="Nhập văn bản..."
-        />
-
-        <label className="sha256-label">
-          MÃ BĂM SHA-256 ĐẦU RA
-          <span className="sha256-meta">64/64 ký tự hex = 256 bits</span>
-        </label>
-        <div className="sha256-hash-box">
-          <HashBlock hash={shaResult} />
-        </div>
-
-        <div className="sha256-info-row">
-          <span>🔒 Một chiều</span>
-          <span>📏 Cố định 256 bit</span>
-          <span>⚡ Avalanche Effect</span>
-        </div>
+    <div className="sha256-section">
+      <div className="sha256-section-head">
+        <h3>Trình tạo mã băm SHA-256</h3>
+        <p>Nhập văn bản và xem mã băm SHA-256 cập nhật ngay tức thì</p>
       </div>
-    </>
+
+      <label className="sha256-label">VĂN BẢN ĐẦU VÀO</label>
+      <textarea
+        className="sha256-textarea"
+        value={shaInput}
+        onChange={(e) => setShaInput(e.target.value)}
+        rows={3}
+        placeholder="Nhập văn bản..."
+      />
+
+      <label className="sha256-label">
+        MÃ BĂM SHA-256 ĐẦU RA
+        <span className="sha256-meta">64/64 ký tự hex = 256 bits</span>
+      </label>
+      <div className="sha256-hash-box">
+        <HashBlock hash={shaResult} />
+      </div>
+
+      <div className="sha256-info-row">
+        <span>🔒 Một chiều</span>
+        <span>📏 Cố định 256 bit</span>
+        <span>⚡ Avalanche Effect</span>
+      </div>
+    </div>
   );
 }
 
 // ============ TAB: ĐỘ DÀI CỐ ĐỊNH ============
-function TabLength({ shaInput, setShaInput, shaResult }) {
+function TabLength() {
   const lengths = useMemo(() => {
     const samples = [
       { label: '1 ký tự', value: 'a' },
@@ -156,13 +153,13 @@ function TabAvalanche({ i1, setI1, i2, setI2, av }) {
             <div>
               <label className="sha256-label">HASH 1</label>
               <div className="sha256-hash-box small">
-                <HashBlock hash={av.hash1} accent="#22d3ee" />
+                <HashBlock hash={av.hash1} accent="var(--accent-cyan)" />
               </div>
             </div>
             <div>
               <label className="sha256-label">HASH 2</label>
               <div className="sha256-hash-box small">
-                <HashBlock hash={av.hash2} accent="#f472b6" />
+                <HashBlock hash={av.hash2} accent="var(--accent-pink)" />
               </div>
             </div>
           </div>
@@ -174,7 +171,9 @@ function TabAvalanche({ i1, setI1, i2, setI2, av }) {
             </div>
             <div className="sha256-stat">
               <span>Tỷ lệ</span>
-              <strong style={{ color: '#22d3ee' }}>{av.percentageChange}</strong>
+              <strong style={{ color: 'var(--accent-cyan)' }}>
+                {av.percentageChange}
+              </strong>
             </div>
             <div className="sha256-stat">
               <span>Kỳ vọng</span>
@@ -189,20 +188,31 @@ function TabAvalanche({ i1, setI1, i2, setI2, av }) {
                 { name: 'Khác nhau', bits: av.differentBits },
               ]}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
-              <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} />
-              <YAxis domain={[0, 256]} stroke="#94a3b8" fontSize={12} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--theme-border)"
+              />
+              <XAxis
+                dataKey="name"
+                stroke="var(--theme-text-muted)"
+                fontSize={12}
+              />
+              <YAxis
+                domain={[0, 256]}
+                stroke="var(--theme-text-muted)"
+                fontSize={12}
+              />
               <Tooltip
                 contentStyle={{
-                  background: '#0f172a',
-                  border: '1px solid rgba(148,163,184,0.2)',
+                  background: 'var(--theme-surface-solid)',
+                  border: '1px solid var(--theme-border-strong)',
                   borderRadius: '8px',
-                  color: '#f8fafc',
+                  color: 'var(--theme-text-strong)',
                 }}
               />
               <Bar dataKey="bits" radius={[8, 8, 0, 0]}>
-                <Cell fill="#22d3ee" />
-                <Cell fill="#f472b6" />
+                <Cell fill="var(--accent-cyan)" />
+                <Cell fill="var(--accent-pink)" />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -259,7 +269,6 @@ function TabExplain() {
 export default function Sha256Visualizer() {
   const [activeTab, setActiveTab] = useState('interact');
 
-  // State
   const [shaInput, setShaInput] = useState('Hello, World!');
   const [shaResult, setShaResult] = useState('');
   const [i1, setI1] = useState('HanTruong');
@@ -286,14 +295,12 @@ export default function Sha256Visualizer() {
 
   return (
     <div className="sha256-visualizer">
-      {/* HEADER */}
       <div className="sha256-header">
         <span className="sha256-eyebrow">CRYPTOGRAPHY LAB</span>
         <h1>Mô Phỏng Hash SHA-256</h1>
         <p>Trình diễn tương tác các tính chất của hàm băm mật mã SHA-256</p>
       </div>
 
-      {/* TABS */}
       <div className="sha256-tabs">
         {TABS.map((tab) => (
           <button
@@ -306,7 +313,6 @@ export default function Sha256Visualizer() {
         ))}
       </div>
 
-      {/* CONTENT */}
       <div className="sha256-content">
         {activeTab === 'interact' && (
           <TabInteract
@@ -315,13 +321,7 @@ export default function Sha256Visualizer() {
             shaResult={shaResult}
           />
         )}
-        {activeTab === 'length' && (
-          <TabLength
-            shaInput={shaInput}
-            setShaInput={setShaInput}
-            shaResult={shaResult}
-          />
-        )}
+        {activeTab === 'length' && <TabLength />}
         {activeTab === 'avalanche' && (
           <TabAvalanche
             i1={i1}
@@ -334,7 +334,6 @@ export default function Sha256Visualizer() {
         {activeTab === 'explain' && <TabExplain />}
       </div>
 
-      {/* PoW SECTION (hiển thị dưới mọi tab) */}
       <div className="sha256-section">
         <div className="sha256-section-head">
           <h3>Khai thác Block (Proof of Work)</h3>
@@ -381,7 +380,7 @@ export default function Sha256Visualizer() {
             </div>
             <label className="sha256-label">HASH HỢP LỆ</label>
             <div className="sha256-hash-box">
-              <HashBlock hash={pow.hash} accent="#34d399" />
+              <HashBlock hash={pow.hash} accent="var(--accent-green)" />
             </div>
           </div>
         )}
