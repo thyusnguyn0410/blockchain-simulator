@@ -14,6 +14,7 @@
 4. [Cấu trúc thư mục](#4-cấu-trúc-thư-mục)
 
 **PHẦN B — BÁO CÁO KỸ THUẬT**
+
 5. [Kiến trúc hệ thống](#5-kiến-trúc-hệ-thống)
 
 6. [Giải thích thiết kế](#6-giải-thích-thiết-kế)
