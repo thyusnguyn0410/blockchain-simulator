@@ -3,7 +3,29 @@
    Full Stylesheet (Cleaned & Completed)
    ========================================= */
 
-/* ===== BASE LAYOUT ===== */
+/* =========================================
+   BLOCKSIM - CSS VARIABLES (ROOT THEME)
+   ========================================= */
+:root {
+  /* Colors - Base */
+  --bg: #020617;
+  --text: #f8fafc;
+  --text-soft: #94a3b8;
+  --line: rgba(148, 163, 184, 0.13);
+
+  /* Colors - Accent */
+  --accent: #22d3ee;
+  --accent-2: #7c3aed;
+  --glow: rgba(34, 211, 238, 0.25);
+  --success: #10b981;
+  --warning: #fb923c;
+  --danger: #ef4444;
+
+  /* Card & Panel Backgrounds */
+  --card-bg: rgba(15, 23, 42, 0.6);
+  --panel-bg: rgba(15, 23, 42, 0.74);
+}
+   /* ===== BASE LAYOUT ===== */
 .app-layout {
   min-height: 100vh;
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(2, 6, 23, 0.2));
