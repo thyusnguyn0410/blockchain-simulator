@@ -13,17 +13,138 @@ import Card from "./components/Card";
 import DataTable from "./components/Table";
 import "./App.css";
 
+const translations = {
+  vi: {
+    controlRoom: "BLOCKCHAIN SIMULATOR / PHÒNG ĐIỀU KHIỂN",
+    dashboardTitle: "Bảng điều khiển mạng lưới",
+    dashboardDesc: "Theo dõi các khối, giao dịch và trạng thái các node trong mạng phân tán.",
+    refreshBtn: "↻ Làm mới mô phỏng",
+    totalTx: "Tổng giao dịch",
+    totalTxDesc: "Đã xác nhận + hàng đợi",
+    activeNodes: "Node hoạt động",
+    activeNodesDesc: "Trực tuyến trong mạng",
+    waitingNode: "Đang chờ node",
+    latestBlock: "Khối mới nhất",
+    awaitingSnap: "Đang chờ dữ liệu",
+    mempool: "Mempool",
+    mempoolDesc: "Giao dịch chờ khai thác",
+    netActivity: "Hoạt động mạng",
+    netActivityDesc: "Sự kiện được ghi nhận theo thời gian thực",
+    eventsPerWindow: "Sự kiện theo chu kỳ kiểm tra",
+    logsCount: "nhật ký nhận được",
+    txTracked: "giao dịch đang theo dõi",
+    netStatus: "Trạng thái mạng",
+    netStatusDesc: "Sức khỏe kết nối toàn hệ thống",
+    restApi: "REST API",
+    websocket: "WebSocket",
+    connectedPeers: "Peers kết nối",
+    difficulty: "Độ khó (Difficulty)",
+    activeNode: "Node đang kết nối",
+    checking: "Đang kiểm tra…",
+    online: "Trực tuyến",
+    offline: "Ngoại tuyến",
+    connected: "Đã kết nối",
+    connecting: "Đang kết nối",
+    disconnected: "Mất kết nối",
+    recentTx: "Giao dịch gần đây",
+    recentTxDesc: "Các giao dịch mới nhất được phát hiện trong mạng",
+    shown: "hiển thị",
+    colHash: "Mã băm giao dịch",
+    colFrom: "Người gửi",
+    colTo: "Người nhận",
+    colAmount: "Số coin",
+    colStatus: "Trạng thái",
+    confirmed: "Đã xác nhận",
+    pending: "Chờ xử lý",
+    learningLab: "PHÒNG THỰC HÀNH",
+    toolsTitle: "Công cụ Blockchain",
+    toolsDesc: "Mô phỏng và trực quan hóa các cơ chế cốt lõi của chuỗi khối",
+    shaTitle: "Trực quan hóa SHA-256",
+    shaDesc: "Mã hóa băm, hiệu ứng tuyết lở (Avalanche Effect) và đào thử nghiệm",
+    headerTitle: "Xem chi tiết Block Header",
+    headerDesc: "Kiểm tra, xác minh và chứng minh tính toàn vẹn của chuỗi khối",
+    mempoolTitle: "Quản lý Mempool",
+    mempoolDesc: "Tạo giao dịch có chữ ký số ECDSA và đẩy vào khối đào",
+    powTitle: "Mô phỏng Proof of Work",
+    powDesc: "Khám phá độ khó khai thác và cơ chế chống tấn công Sybil",
+    merkleLab: "MERKLE LAB",
+    merkleTitle: "Mô phỏng luồng Cây Merkle",
+    merkleDesc: "Khám phá cách giao dịch được băm và ghép thành Merkle Root duy nhất.",
+    aiTitle: "🤖 Trợ lý Blockchain AI",
+    aiFabTitle: "Trợ lý Blockchain AI"
+  },
+  en: {
+    controlRoom: "BLOCKCHAIN SIMULATOR / CONTROL ROOM",
+    dashboardTitle: "Network dashboard",
+    dashboardDesc: "Observe blocks, transactions, and node health from one focused workspace.",
+    refreshBtn: "↻ Refresh simulation",
+    totalTx: "Total transactions",
+    totalTxDesc: "Confirmed + pending",
+    activeNodes: "Active nodes",
+    activeNodesDesc: "Reporting online",
+    waitingNode: "Waiting for node",
+    latestBlock: "Latest block",
+    awaitingSnap: "Awaiting snapshot",
+    mempool: "Mempool",
+    mempoolDesc: "Transactions awaiting mining",
+    netActivity: "Network activity",
+    netActivityDesc: "Recent events reported by the active node",
+    eventsPerWindow: "Events per polling window",
+    logsCount: "logs received",
+    txTracked: "active transactions tracked",
+    netStatus: "Network status",
+    netStatusDesc: "Connection health across the simulator",
+    restApi: "REST API",
+    websocket: "WebSocket",
+    connectedPeers: "Connected peers",
+    difficulty: "Difficulty",
+    activeNode: "Active node",
+    checking: "Checking…",
+    online: "Online",
+    offline: "Offline",
+    connected: "Connected",
+    connecting: "Connecting",
+    disconnected: "Disconnected",
+    recentTx: "Recent transactions",
+    recentTxDesc: "Latest transactions observed on the network",
+    shown: "shown",
+    colHash: "Transaction hash",
+    colFrom: "From",
+    colTo: "To",
+    colAmount: "Amount",
+    colStatus: "Status",
+    confirmed: "Confirmed",
+    pending: "Pending",
+    learningLab: "LEARNING LAB",
+    toolsTitle: "Blockchain tools",
+    toolsDesc: "Interactive visualizations and blockchain learning simulations",
+    shaTitle: "SHA-256 visualizer",
+    shaDesc: "Hashing, avalanche effect, and proof-of-work exploration",
+    headerTitle: "Block header viewer",
+    headerDesc: "Inspect, verify, and safely demonstrate chain integrity",
+    mempoolTitle: "Mempool manager",
+    mempoolDesc: "Create signed transactions and mine them into the local chain",
+    powTitle: "Proof of work simulator",
+    powDesc: "Explore mining difficulty and chain reinforcement",
+    merkleLab: "MERKLE LAB",
+    merkleTitle: "Merkle Tree Simulator",
+    merkleDesc: "Explore how transactions are hashed and grouped into a single Merkle Root.",
+    aiTitle: "🤖 Blockchain AI Assistant",
+    aiFabTitle: "Blockchain AI Assistant"
+  }
+};
+
 const formatNumber = (value) => new Intl.NumberFormat("en-US").format(value || 0);
 
 const shortHash = (value = "") =>
   value.length > 18 ? `${value.slice(0, 10)}…${value.slice(-6)}` : value || "—";
 
-const getTransactions = (blocks = [], mempool = []) => {
+const getTransactions = (blocks = [], mempool = [], t) => {
   const confirmed = blocks.flatMap((block) =>
     (block.transactions || []).map((tx) => ({
       ...tx,
       hash: tx.txid || tx.id || `${block.hash || block.index}-${tx.from || tx.sender || "tx"}`,
-      status: "Confirmed",
+      status: t.confirmed,
       block: block.index ?? block.height ?? "—",
     }))
   );
@@ -31,7 +152,7 @@ const getTransactions = (blocks = [], mempool = []) => {
   const pending = mempool.map((tx) => ({
     ...tx,
     hash: tx.txid || tx.id || "pending",
-    status: "Pending",
+    status: t.pending,
     block: "—",
   }));
 
@@ -51,7 +172,7 @@ function MetricCard({ label, value, detail, icon, tone = "cyan" }) {
   );
 }
 
-function ActivityChart({ logs = [], transactions = [] }) {
+function ActivityChart({ logs = [], transactions = [], t }) {
   const bars = useMemo(() => {
     if (logs.length > 0) {
       const recent = logs.slice(-12);
@@ -71,8 +192,8 @@ function ActivityChart({ logs = [], transactions = [] }) {
 
   return (
     <Card
-      title="Network activity"
-      description="Recent events reported by the active node"
+      title={t.netActivity}
+      description={t.netActivityDesc}
       className="activity-card"
     >
       <div className="chart" aria-label="Recent network activity chart">
@@ -85,53 +206,53 @@ function ActivityChart({ logs = [], transactions = [] }) {
       </div>
       <div className="chart-legend">
         <span>
-          <i className="legend-dot cyan-dot" />Events per polling window
+          <i className="legend-dot cyan-dot" />{t.eventsPerWindow}
         </span>
         <span>
           {logs.length
-            ? `${logs.length} logs received`
-            : `${transactions.length} active transactions tracked`}
+            ? `${logs.length} ${t.logsCount}`
+            : `${transactions.length} ${t.txTracked}`}
         </span>
       </div>
     </Card>
   );
 }
 
-function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
+function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection, t }) {
   const online = nodeStatus?.status === "online" || connection === "connected";
 
   return (
-    <Card title="Network status" description="Connection health across the simulator">
+    <Card title={t.netStatus} description={t.netStatusDesc}>
       <div className="status-list">
         <div className="status-row">
-          <span>REST API</span>
+          <span>{t.restApi}</span>
           <strong className={online ? "status-success" : "status-warning"}>
-            <i />{loading ? "Checking…" : online ? "Online" : "Offline"}
+            <i />{loading ? t.checking : online ? t.online : t.offline}
           </strong>
         </div>
         <div className="status-row">
-          <span>WebSocket</span>
+          <span>{t.websocket}</span>
           <strong className={connection === "connected" ? "status-success" : "status-warning"}>
             <i />
             {connection === "connected"
-              ? "Connected"
+              ? t.connected
               : connection === "connecting"
-              ? "Connecting"
-              : "Disconnected"}
+              ? t.connecting
+              : t.disconnected}
           </strong>
         </div>
         <div className="status-row">
-          <span>Connected peers</span>
+          <span>{t.connectedPeers}</span>
           <strong>{nodeStatus?.peers ?? 0}</strong>
         </div>
         <div className="status-row">
-          <span>Difficulty</span>
+          <span>{t.difficulty}</span>
           <strong>{nodeStatus?.difficulty ?? 2}</strong>
         </div>
         <div className="status-row">
-          <span>Active node</span>
+          <span>{t.activeNode}</span>
           <strong className="status-cyan node-url" title={activeUrl || "No active node"}>
-            {activeUrl || import.meta.env.VITE_API_URL || "Connecting..."}
+            {activeUrl || import.meta.env.VITE_API_URL || t.connecting}
           </strong>
         </div>
         {error && <p className="inline-error">{error.message}</p>}
@@ -140,33 +261,33 @@ function NetworkStatus({ nodeStatus, activeUrl, loading, error, connection }) {
   );
 }
 
-function TransactionsPanel({ transactions }) {
+function TransactionsPanel({ transactions, t }) {
   const columns = [
     {
       key: "hash",
-      label: "Transaction hash",
+      label: t.colHash,
       render: (row) => <span className="hash">{shortHash(row.hash)}</span>,
     },
     {
       key: "from",
-      label: "From",
+      label: t.colFrom,
       render: (row) => <span className="address">{shortHash(row.from || row.sender)}</span>,
     },
     {
       key: "to",
-      label: "To",
+      label: t.colTo,
       render: (row) => <span className="address">{shortHash(row.to || row.recipient)}</span>,
     },
     {
       key: "amount",
-      label: "Amount",
+      label: t.colAmount,
       render: (row) => (row.amount === undefined ? "—" : Number(row.amount).toFixed(4)),
     },
     {
       key: "status",
-      label: "Status",
+      label: t.colStatus,
       render: (row) => (
-        <span className={`status-badge ${row.status === "Pending" ? "warning" : "success"}`}>
+        <span className={`status-badge ${row.status === t.pending ? "warning" : "success"}`}>
           {row.status}
         </span>
       ),
@@ -175,9 +296,9 @@ function TransactionsPanel({ transactions }) {
 
   return (
     <Card
-      title="Recent transactions"
-      description="Latest transactions observed on the network"
-      actions={<span className="panel-count">{transactions.length} shown</span>}
+      title={t.recentTx}
+      description={t.recentTxDesc}
+      actions={<span className="panel-count">{transactions.length} {t.shown}</span>}
       className="transactions-panel"
     >
       <DataTable columns={columns} rows={transactions} />
@@ -188,12 +309,29 @@ function TransactionsPanel({ transactions }) {
 function App() {
   const [activeSection, setActiveSection] = useState("Dashboard");
   const [showChat, setShowChat] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const [theme, setTheme] = useState(() => localStorage.getItem("blocksim_theme") || "dark");
+  const [lang, setLang] = useState(() => localStorage.getItem("blocksim_lang") || "vi");
+
+  const t = translations[lang] || translations.vi;
+
+  useEffect(() => {
+    localStorage.setItem("blocksim_theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("blocksim_lang", lang);
+  }, [lang]);
 
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
   const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
 
-  const transactions = useMemo(() => getTransactions(blocks, mempool), [blocks, mempool]);
+  const transactions = useMemo(() => getTransactions(blocks, mempool, t), [blocks, mempool, t]);
   const totalTransactions =
     blocks.reduce((total, block) => total + (block.transactions?.length || 0), 0) + mempool.length;
 
@@ -220,6 +358,10 @@ function App() {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
+  const handleLangToggle = () => {
+    setLang((prev) => (prev === "vi" ? "en" : "vi"));
+  };
+
   return (
     <MainLayout
       activeItem={activeSection}
@@ -227,77 +369,90 @@ function App() {
       connection={connection}
       theme={theme}
       onThemeToggle={handleThemeToggle}
+      lang={lang}
+      onLangToggle={handleLangToggle}
     >
       <div className="dashboard" id="dashboard-overview">
         <header className="page-header">
           <div>
-            <span className="page-label">BLOCKCHAIN SIMULATOR / CONTROL ROOM</span>
-            <h1>Network dashboard</h1>
-            <p>Observe blocks, transactions, and node health from one focused workspace.</p>
+            <div className="flex items-center gap-3 mb-1">
+              <span className="page-label">{t.controlRoom}</span>
+              <button
+                type="button"
+                onClick={handleLangToggle}
+                className="lang-toggle-badge px-2 py-0.5 text-xs font-semibold rounded border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/10 transition-colors"
+                title="Switch Language"
+              >
+                🌐 {lang.toUpperCase()}
+              </button>
+            </div>
+            <h1>{t.dashboardTitle}</h1>
+            <p>{t.dashboardDesc}</p>
           </div>
-          <Button onClick={handleNewSimulation}>↻ Refresh simulation</Button>
+          <Button onClick={handleNewSimulation}>{t.refreshBtn}</Button>
         </header>
 
         <section className="stats-grid" aria-label="Network metrics">
           <MetricCard
-            label="Total transactions"
+            label={t.totalTx}
             value={formatNumber(totalTransactions)}
-            detail="Confirmed + pending"
+            detail={t.totalTxDesc}
             icon="⇄"
             tone="cyan"
           />
           <MetricCard
-            label="Active nodes"
+            label={t.activeNodes}
             value={formatNumber(onlineNodeCount || (nodeStatus?.peers ? nodeStatus.peers + 1 : 1))}
-            detail={nodeStatus?.status === "online" ? "Reporting online" : "Waiting for node"}
+            detail={nodeStatus?.status === "online" ? t.activeNodesDesc : t.waitingNode}
             icon="◎"
             tone="green"
           />
           <MetricCard
-            label="Latest block"
+            label={t.latestBlock}
             value={`#${latestBlock?.index ?? nodeStatus?.height ?? 0}`}
-            detail={latestBlock ? shortHash(latestBlock.hash) : "Awaiting snapshot"}
+            detail={latestBlock ? shortHash(latestBlock.hash) : t.awaitingSnap}
             icon="#"
             tone="purple"
           />
           <MetricCard
-            label="Mempool"
+            label={t.mempool}
             value={formatNumber(mempool.length)}
-            detail="Transactions awaiting mining"
+            detail={t.mempoolDesc}
             icon="⌁"
             tone="orange"
           />
         </section>
 
         <section className="dashboard-grid" id="network-status">
-          <ActivityChart logs={logs} transactions={transactions} />
+          <ActivityChart logs={logs} transactions={transactions} t={t} />
           <NetworkStatus
             nodeStatus={nodeStatus}
             activeUrl={activeUrl}
             loading={loading}
             error={error}
             connection={connection}
+            t={t}
           />
         </section>
 
         <section id="transactions">
-          <TransactionsPanel transactions={transactions} />
+          <TransactionsPanel transactions={transactions} t={t} />
         </section>
 
         <section id="blockchain-tools" className="tool-section">
           <div className="section-heading">
             <div>
-              <span className="page-label">LEARNING LAB</span>
-              <h2>Blockchain tools</h2>
-              <p>Interactive visualizations and blockchain learning simulations</p>
+              <span className="page-label">{t.learningLab}</span>
+              <h2>{t.toolsTitle}</h2>
+              <p>{t.toolsDesc}</p>
             </div>
           </div>
 
           <div className="tool-grid">
             <div id="sha256-tool">
               <Card
-                title="SHA-256 visualizer"
-                description="Hashing, avalanche effect, and proof-of-work exploration"
+                title={t.shaTitle}
+                description={t.shaDesc}
                 className="tool-card"
               >
                 <Sha256Visualizer />
@@ -306,8 +461,8 @@ function App() {
 
             <div id="blockheader-tool">
               <Card
-                title="Block header viewer"
-                description="Inspect, verify, and safely demonstrate chain integrity"
+                title={t.headerTitle}
+                description={t.headerDesc}
                 className="tool-card"
               >
                 <BlockHeaderViewer />
@@ -316,8 +471,8 @@ function App() {
 
             <div id="mempool-tool">
               <Card
-                title="Mempool manager"
-                description="Create signed transactions and mine them into the local chain"
+                title={t.mempoolTitle}
+                description={t.mempoolDesc}
                 className="tool-card"
               >
                 <MempoolManager apiUrl={activeUrl} />
@@ -326,8 +481,8 @@ function App() {
 
             <div id="pow-tool">
               <Card
-                title="Proof of work simulator"
-                description="Explore mining difficulty and chain reinforcement"
+                title={t.powTitle}
+                description={t.powDesc}
                 className="tool-card"
               >
                 <ProofOfWorkSimulator />
@@ -339,9 +494,9 @@ function App() {
         <section id="merkle-tree-tab" className="tool-section merkle-tab-section">
           <div className="section-heading">
             <div>
-              <span className="page-label">MERKLE LAB</span>
-              <h2>Mô phỏng flow Cây Merkle</h2>
-              <p>Khám phá cách giao dịch được băm và ghép thành Merkle Root.</p>
+              <span className="page-label">{t.merkleLab}</span>
+              <h2>{t.merkleTitle}</h2>
+              <p>{t.merkleDesc}</p>
             </div>
           </div>
           <div className="dashboard-panel merkle-panel">
@@ -355,7 +510,7 @@ function App() {
         className="chat-fab"
         onClick={() => setShowChat((v) => !v)}
         aria-label="Mở trợ lý AI"
-        title="Trợ lý Blockchain AI"
+        title={t.aiFabTitle}
       >
         {showChat ? "✕" : "💬"}
       </button>
@@ -363,7 +518,7 @@ function App() {
       {showChat && (
         <div className="chat-panel">
           <div className="chat-header">
-            <span>🤖 Trợ lý Blockchain AI</span>
+            <span>{t.aiTitle}</span>
             <button
               className="chat-close"
               onClick={() => setShowChat(false)}

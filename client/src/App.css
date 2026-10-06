@@ -1,4 +1,21 @@
 /* Additional page-level UI */
+:root, [data-theme="dark"] {
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --border-color: rgba(148, 163, 184, 0.13);
+  /* ... các biến khác ... */
+}
+
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --border-color: rgba(15, 23, 42, 0.1);
+  /* ... các biến khác ... */
+}
 .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; background: rgba(52,211,153,.12); color: #34d399; }
 .status-badge.success::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .status-badge.warning { background: rgba(245,158,11,.12); color: #fbbf24; }

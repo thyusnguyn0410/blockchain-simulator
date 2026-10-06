@@ -1,4 +1,50 @@
+import React from "react";
+import { useApp } from "../context/AppContext";
+
 export default function Navbar({ onMenuClick, connection = "connecting" }) {
+  const { theme, toggleTheme, lang, toggleLang, t } = useApp();
   const connected = connection === "connected";
-  return <header className="navbar"><div className="navbar-left"><button type="button" className="mobile-menu-button" onClick={onMenuClick} aria-label="Open navigation">☰</button><div className="brand"><div className="brand-logo">B</div><div className="brand-info"><strong>BlockSim</strong><span>Blockchain simulator</span></div></div></div><div className="navbar-right"><div className={`network-indicator ${connected ? "" : "is-pending"}`}><span className="online-dot" />{connected ? "Network online" : "Connecting…"}</div><div className="navbar-divider" /><button type="button" className="profile-button" aria-label="Open profile menu"><span className="profile-avatar">T</span><span className="profile-name">Team workspace</span><span className="profile-arrow">⌄</span></button></div></header>;
+
+  return (
+    <header className="navbar">
+      <div className="navbar-left">
+        <button type="button" className="mobile-menu-button" onClick={onMenuClick}>☰</button>
+        <div className="brand">
+          <div className="brand-logo">⛓️</div>
+          <div className="brand-info">
+            <strong>BlockSim</strong>
+            <span>{lang === "vi" ? "Bộ mô phỏng Blockchain" : "Blockchain Simulator"}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="navbar-right">
+        {/* Nút chuyển đổi VI / EN */}
+        <button
+          type="button"
+          className="lang-toggle-btn"
+          onClick={toggleLang}
+          title="Chuyển ngôn ngữ / Switch language"
+          style={{ padding: "4px 8px", cursor: "pointer", borderRadius: "6px" }}
+        >
+          {lang === "vi" ? "🇻🇳 VI" : "🇬🇧 EN"}
+        </button>
+
+        {/* Nút chuyển đổi Light / Dark */}
+        <button
+          type="button"
+          className="theme-toggle-btn"
+          onClick={toggleTheme}
+          title={`Chuyển sang chế độ ${theme === "dark" ? "Sáng" : "Tối"}`}
+          style={{ padding: "4px 8px", cursor: "pointer", borderRadius: "6px" }}
+        >
+          {theme === "dark" ? "☀️" : "🌙"}
+        </button>
+
+        <span className={`network-indicator ${connected ? "connected" : ""}`}>
+          <i></i>{connected ? t("wsConnected") : "Connecting..."}
+        </span>
+      </div>
+    </header>
+  );
 }
