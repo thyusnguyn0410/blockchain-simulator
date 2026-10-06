@@ -3,7 +3,7 @@ import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
 import { useTheme } from "../contexts/ThemeContext";
 
-export default function MainLayout({ children, activeItem, onNavigate, connection, theme = "dark", onThemeToggle }) {
+export default function MainLayout({ children, activeItem, onNavigate, connection }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const navigate = (label) => { onNavigate?.(label); setIsSidebarOpen(false); };
