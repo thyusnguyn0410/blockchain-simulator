@@ -979,7 +979,109 @@ section.tool-section.merkle-tab-section .section-heading p {
   flex-direction: column;
   gap: 4px;
 }
+/* ===== RESPONSIVE MOBILE FIX (<= 768px) ===== */
+@media (max-width: 768px) {
+  /* Hiển thị nút menu hamburger */
+  .mobile-menu-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--theme-border);
+    background: transparent;
+    color: var(--theme-text-strong);
+    font-size: 20px;
+    cursor: pointer;
+  }
 
+  /* Chuyển Sidebar thành Drawer trượt ra vào */
+  .sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    width: 280px !important;
+    max-width: 80vw !important;
+    z-index: 100 !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0) !important;
+  }
+
+  /* Cho phép hiển thị nút đóng và lớp phủ mờ trên mobile */
+  .mobile-sidebar-header {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--theme-border);
+  }
+
+  .mobile-sidebar-header span {
+    font-weight: 700;
+    color: var(--theme-text-strong);
+    font-size: 15px;
+  }
+
+  .mobile-sidebar-header button {
+    background: transparent;
+    border: none;
+    color: var(--theme-text-muted);
+    font-size: 22px;
+    cursor: pointer;
+  }
+
+  .sidebar-overlay {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .sidebar-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Co giãn container chính và các grid */
+  .layout-content {
+    display: block !important;
+    width: 100%;
+  }
+
+  .main-content-inner {
+    padding: 16px 12px 60px !important;
+  }
+
+  .stats-grid,
+  .dashboard-grid,
+  .tool-grid,
+  .merkle-workspace,
+  .bhv-grid,
+  .pow-grid-main {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .table-wrapper,
+  .merkle-tree-stage {
+    width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
 /* ================= SHA-256 VISUALIZER ================= */
 .sha256-visualizer {
   display: flex;
