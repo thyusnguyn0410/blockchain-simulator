@@ -1,4 +1,109 @@
 /* Shared badges, forms, and network cards */
+:root,
+[data-theme="dark"] {
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --bg-card: rgba(15, 23, 42, 0.74);
+  --bg-hover: rgba(148, 163, 184, 0.08);
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --border-color: rgba(148, 163, 184, 0.13);
+  --border-hover: rgba(148, 163, 184, 0.25);
+
+  --accent-cyan: #22d3ee;
+  --accent-green: #34d399;
+  --accent-purple: #a78bfa;
+  --accent-orange: #f59e0b;
+  --accent-red: #ef4444;
+
+  --shadow-card: 0 18px 40px rgba(2, 6, 23, 0.18);
+
+  --theme-page: var(--bg-primary);
+  --theme-body: radial-gradient(circle at 75% -20%, rgba(8,145,178,.14), transparent 34rem), radial-gradient(circle at 10% 40%, rgba(124,58,237,.06), transparent 28rem), var(--bg-primary);
+  --theme-surface: var(--bg-card);
+  --theme-surface-solid: var(--bg-secondary);
+  --theme-surface-raised: var(--bg-tertiary);
+  --theme-surface-deep: rgba(2, 6, 23, 0.55);
+  --theme-navbar: rgba(2,6,23,.84);
+  --theme-sidebar: rgba(2,6,23,.72);
+  --theme-text: var(--text-secondary);
+  --theme-text-strong: var(--text-primary);
+  --theme-text-secondary: var(--text-secondary);
+  --theme-text-muted: var(--text-muted);
+  --theme-text-subtle: var(--text-dim);
+  --theme-border: var(--border-color);
+  --theme-border-strong: var(--border-hover);
+  --theme-hover: var(--bg-hover);
+  --theme-shadow: var(--shadow-card);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.9);
+  --bg-hover: rgba(15, 23, 42, 0.05);
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+
+  --border-color: rgba(15, 23, 42, 0.1);
+  --border-hover: rgba(15, 23, 42, 0.2);
+
+  --accent-cyan: #0891b2;
+  --accent-green: #059669;
+  --accent-purple: #7c3aed;
+  --accent-orange: #d97706;
+  --accent-red: #dc2626;
+
+  --shadow-card: 0 18px 40px rgba(15, 23, 42, 0.08);
+
+  --theme-page: var(--bg-primary);
+  --theme-body: radial-gradient(circle at 75% -20%, rgba(8,145,178,.12), transparent 34rem), radial-gradient(circle at 10% 40%, rgba(124,58,237,.05), transparent 28rem), var(--bg-primary);
+  --theme-surface: var(--bg-card);
+  --theme-surface-solid: var(--bg-secondary);
+  --theme-surface-raised: var(--bg-tertiary);
+  --theme-surface-deep: #e2e8f0;
+  --theme-navbar: rgba(255,255,255,.9);
+  --theme-sidebar: rgba(248,250,252,.92);
+  --theme-text: var(--text-primary);
+  --theme-text-strong: var(--text-primary);
+  --theme-text-secondary: var(--text-secondary);
+  --theme-text-muted: var(--text-muted);
+  --theme-text-subtle: var(--text-dim);
+  --theme-border: var(--border-color);
+  --theme-border-strong: var(--border-hover);
+  --theme-hover: var(--bg-hover);
+  --theme-shadow: var(--shadow-card);
+}
+/* Nút chuyển đổi Dark/Light mode trong suốt, không bị bệt trắng */
+.theme-toggle-button,
+.navbar button[aria-label*="theme"],
+.navbar button[title*="mode"] {
+  background: transparent !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-secondary) !important;
+  border-radius: 10px !important;
+  padding: 6px 10px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.theme-toggle-button:hover,
+.navbar button[aria-label*="theme"]:hover,
+.navbar button[title*="mode"]:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--accent-cyan) !important;
+}
+
+/* Base Utility & Badges */
 .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; white-space: nowrap; background: rgba(52,211,153,.12); color: #34d399; }
 .status-badge.success::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .status-badge.warning { background: rgba(245,158,11,.12); color: #fbbf24; }
