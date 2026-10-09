@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Card from '../../components/Card.jsx';
 import Button from '../../components/Button.jsx';
 import NodeCard from './NodeCard.jsx';
 import LiveLogViewer from './LiveLogViewer.jsx';
-import { useWebSocket } from '../../hooks/useWebSocket.js';
 
 const STORAGE_KEY = 'blockchain-sim:registered-nodes';
 const DEFAULT_NODES = ['localhost:3001', 'localhost:3002', 'localhost:3003'];
@@ -38,7 +37,9 @@ export default function NetworkDashboard() {
   };
 
   const removeNode = (address) => {
-    setNodes((prev) => prev.filter((n) => n !== address));
+    const remaining = nodes.filter((node) => node !== address);
+    setNodes(remaining);
+    if (connectFrom === address) setConnectFrom(remaining[0] || '');
   };
 
   // Kết nối 2 Node
@@ -62,8 +63,71 @@ export default function NetworkDashboard() {
   };
 
   // Trạm WebSocket trung gian
-  const { status: wsStatus, address: wsAddress, messages, connect, disconnect, clear } = useWebSocket();
+  const socketRef = useRef(null);
+  const [wsStatus, setWsStatus] = useState('disconnected');
+  const [wsAddress, setWsAddress] = useState('');
+  const [messages, setMessages] = useState([]);
   const [wsInput, setWsInput] = useState(guessWsAddress(nodes[0] || DEFAULT_NODES[0]));
+
+  useEffect(() => () => {
+    socketRef.current?.close();
+  }, []);
+
+  const connect = (address) => {
+    const target = address.trim();
+    if (!target) return;
+
+    socketRef.current?.close();
+    setWsAddress(target);
+    setWsStatus('connecting');
+
+    try {
+      const socket = new WebSocket(target);
+      socketRef.current = socket;
+      socket.addEventListener('open', () => {
+        if (socketRef.current === socket) setWsStatus('connected');
+      });
+      socket.addEventListener('message', (event) => {
+        if (socketRef.current !== socket) return;
+        let line = event.data;
+        let tone = 'other';
+        try {
+          const payload = JSON.parse(event.data);
+          line = typeof payload === 'string' ? payload : JSON.stringify(payload);
+          const type = `${payload.type || ''} ${payload.event || ''}`.toLowerCase();
+          if (type.includes('tx') || type.includes('mempool')) tone = 'tx';
+          else if (type.includes('block')) tone = 'block';
+          else if (type.includes('sync') || type.includes('consensus')) tone = 'query';
+          else if (type.includes('reject') || type.includes('error')) tone = 'error';
+        } catch {
+          // Keep non-JSON WebSocket frames readable in the inspector.
+        }
+        setMessages((current) => [...current, { at: Date.now(), line, tone }].slice(-200));
+      });
+      socket.addEventListener('close', () => {
+        if (socketRef.current === socket) setWsStatus('disconnected');
+      });
+      socket.addEventListener('error', () => {
+        if (socketRef.current === socket) setWsStatus('error');
+      });
+    } catch (error) {
+      socketRef.current = null;
+      setWsStatus('error');
+      setMessages((current) => [
+        ...current,
+        { at: Date.now(), line: `Không thể kết nối WebSocket: ${error.message}`, tone: 'error' },
+      ].slice(-200));
+    }
+  };
+
+  const disconnect = () => {
+    const socket = socketRef.current;
+    socketRef.current = null;
+    socket?.close();
+    setWsStatus('disconnected');
+  };
+
+  const clear = () => setMessages([]);
 
   const useDefaultServer = () => {
     const defaultAddr = guessWsAddress(nodes[0] || DEFAULT_NODES[0]);
@@ -72,27 +136,28 @@ export default function NetworkDashboard() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="network-dashboard">
       {/* 1. Danh sách Full Node */}
       <Card
         title="Danh sách Full Node (Project 8 & 9)"
         description="Đăng ký Node theo địa chỉ IP:port — Tự động cập nhật GET /status mỗi 2 giây"
       >
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+        <div className="network-add-row">
           <input
+            aria-label="Địa chỉ node mới"
             value={newNodeAddress}
             onChange={(e) => setNewNodeAddress(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addNode()}
             placeholder="vd: localhost:3004"
-            style={{ flex: 1, padding: '8px 12px', background: '#090d16', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontFamily: 'monospace' }}
+            className="network-input"
           />
           <Button onClick={addNode}>+ Thêm Node</Button>
         </div>
 
         {nodes.length === 0 ? (
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>Chưa có Node nào được đăng ký.</p>
+          <p className="network-empty">Chưa có Node nào được đăng ký.</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+          <div className="network-node-grid">
             {nodes.map((address) => (
               <NodeCard key={address} address={address} onRemove={removeNode} />
             ))}
@@ -105,33 +170,36 @@ export default function NetworkDashboard() {
         title="Kết nối 2 Node (P2P Handshake)"
         description="Yêu cầu Node A mở kết nối WebSocket tới Node B để đồng bộ Block và Consensus"
       >
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '180px' }}>
-            <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Node A (Chủ động gửi)</label>
+        <div className="network-connect-row">
+          <div className="network-field">
+            <label className="network-label" htmlFor="network-connect-from">Node A (Chủ động gửi)</label>
             <select
+              id="network-connect-from"
               value={connectFrom}
               onChange={(e) => setConnectFrom(e.target.value)}
-              style={{ width: '100%', padding: '8px', background: '#090d16', border: '1px solid #334155', borderRadius: '8px', color: '#fff' }}
+              className="network-input"
             >
+              {nodes.length === 0 && <option value="">Chưa có node</option>}
               {nodes.map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
           </div>
-          <div style={{ flex: 1, minWidth: '180px' }}>
-            <label style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Peer Đích (ws://host:port)</label>
+          <div className="network-field">
+            <label className="network-label" htmlFor="network-peer-address">Peer Đích (ws://host:port)</label>
             <input
+              id="network-peer-address"
               value={connectToPeer}
               onChange={(e) => setConnectToPeer(e.target.value)}
               placeholder="ws://localhost:6002"
-              style={{ width: '100%', padding: '8px', background: '#090d16', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontFamily: 'monospace' }}
+              className="network-input network-mono"
             />
           </div>
           <Button onClick={handleConnectPeers} variant="outline">
             Kết nối P2P
           </Button>
         </div>
-        {connectMsg && <p style={{ fontSize: '0.75rem', color: '#38bdf8', marginTop: '10px' }}>{connectMsg}</p>}
+        {connectMsg && <p className="network-feedback" role="status">{connectMsg}</p>}
       </Card>
 
       {/* 3. Terminal WebSocket Traffic */}
@@ -139,12 +207,13 @@ export default function NetworkDashboard() {
         title="Trạm Giám Sát Mạng (WebSocket Inspector)"
         description="Kết nối trực tiếp vào cổng WebSocket P2P của Node để xem lưu lượng gói tin thời gian thực"
       >
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
+        <div className="network-ws-controls">
           <input
+            aria-label="Địa chỉ WebSocket"
             value={wsInput}
             onChange={(e) => setWsInput(e.target.value)}
             placeholder="ws://localhost:6001"
-            style={{ flex: 1, minWidth: '200px', padding: '8px 12px', background: '#090d16', border: '1px solid #334155', borderRadius: '8px', color: '#fff', fontFamily: 'monospace' }}
+            className="network-input network-mono"
           />
           <Button onClick={() => connect(wsInput)} disabled={wsStatus === 'connected'}>
             Kết nối WS
@@ -155,30 +224,23 @@ export default function NetworkDashboard() {
           <Button onClick={useDefaultServer} variant="outline">
             Mặc định
           </Button>
-          <span style={{ 
-            fontSize: '0.75rem', 
-            padding: '4px 10px', 
-            borderRadius: '6px', 
-            background: wsStatus === 'connected' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-            color: wsStatus === 'connected' ? '#4ade80' : '#f87171',
-            fontWeight: 'bold'
-          }}>
+          <span className={`network-ws-status ${wsStatus === 'connected' ? 'is-online' : 'is-offline'}`}>
             {wsStatus === 'connected' ? `Online (${wsAddress})` : 'Chưa kết nối'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Gói tin P2P nhận được</span>
-          <button onClick={clear} style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem' }}>
+        <div className="network-log-header">
+          <span>Gói tin P2P nhận được</span>
+          <button onClick={clear} className="network-quiet-button">
             Xoá log
           </button>
         </div>
 
-        <div style={{ height: '180px', overflowY: 'auto', background: '#090d16', padding: '12px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '0.75rem' }}>
-          {messages.length === 0 && <div style={{ color: '#64748b' }}>Chưa có sự kiện nào...</div>}
+        <div className="network-packet-log" aria-live="polite">
+          {messages.length === 0 && <div className="network-empty">Chưa có sự kiện nào...</div>}
           {messages.map((m, i) => (
-            <div key={i} className={toneClass(m.tone)} style={{ marginBottom: '4px' }}>
-              <span style={{ color: '#475569' }}>{new Date(m.at).toLocaleTimeString()} </span>
+            <div key={i} className={`network-packet-line ${toneClass(m.tone)}`}>
+              <span>{new Date(m.at).toLocaleTimeString()} </span>
               {m.line}
             </div>
           ))}
@@ -193,10 +255,10 @@ export default function NetworkDashboard() {
 
 function toneClass(tone) {
   switch (tone) {
-    case 'block': return 'text-emerald-400';
-    case 'tx': return 'text-amber-400';
-    case 'error': return 'text-red-400';
-    case 'query': return 'text-indigo-300';
-    default: return 'text-slate-300';
+    case 'block': return 'network-event-block';
+    case 'tx': return 'network-event-tx';
+    case 'error': return 'network-event-reject';
+    case 'query': return 'network-event-sync';
+    default: return 'network-event-other';
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Bar,
   BarChart,
@@ -11,7 +11,6 @@ import {
 } from 'recharts';
 import {
   calculateSHA256,
-  formatHashFormatted,
   checkAvalancheEffect,
   bruteforceHash,
 } from './SHA-256.js';
@@ -25,7 +24,7 @@ const TABS = [
 ];
 
 // ============ HASH BLOCK (4x4 grid of 4-char chunks) ============
-function HashBlock({ hash, accent = 'var(--accent-purple)' }) {
+function HashBlock({ hash, accent = 'var(--accent-purple)', compareHash }) {
   if (!hash) return <div className="sha256-hash-empty">—</div>;
 
   const chunks = [];
@@ -38,8 +37,15 @@ function HashBlock({ hash, accent = 'var(--accent-purple)' }) {
       {chunks.map((chunk, i) => (
         <span
           key={i}
-          className="sha256-hash-chunk"
-          style={{ color: accent }}
+          className={`sha256-hash-chunk ${
+            compareHash && chunk !== compareHash.slice(i * 4, i * 4 + 4) ? 'changed' : ''
+          }`}
+          style={{ '--hash-accent': accent }}
+          title={
+            compareHash && chunk !== compareHash.slice(i * 4, i * 4 + 4)
+              ? `Nhóm ký tự ${i + 1} đã thay đổi`
+              : undefined
+          }
         >
           {chunk}
         </span>
@@ -153,13 +159,13 @@ function TabAvalanche({ i1, setI1, i2, setI2, av }) {
             <div>
               <label className="sha256-label">HASH 1</label>
               <div className="sha256-hash-box small">
-                <HashBlock hash={av.hash1} accent="var(--accent-cyan)" />
+                <HashBlock hash={av.hash1} accent="var(--accent-cyan)" compareHash={av.hash2} />
               </div>
             </div>
             <div>
               <label className="sha256-label">HASH 2</label>
               <div className="sha256-hash-box small">
-                <HashBlock hash={av.hash2} accent="var(--accent-pink)" />
+                <HashBlock hash={av.hash2} accent="var(--accent-pink)" compareHash={av.hash1} />
               </div>
             </div>
           </div>
@@ -178,6 +184,28 @@ function TabAvalanche({ i1, setI1, i2, setI2, av }) {
             <div className="sha256-stat">
               <span>Kỳ vọng</span>
               <strong>~50%</strong>
+            </div>
+          </div>
+
+          <div className="sha256-change-meter">
+            <div className="sha256-change-meter-label">
+              <span>Bit đầu ra thay đổi</span>
+              <strong>{av.percentageChange}</strong>
+            </div>
+            <div
+              className="sha256-change-track"
+              role="progressbar"
+              aria-label="Tỷ lệ bit SHA-256 thay đổi"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow={Math.max(0, Math.min(100, Number.parseFloat(av.percentageChange) || 0))}
+            >
+              <span
+                className="sha256-change-fill"
+                style={{
+                  width: `${Math.max(0, Math.min(100, Number.parseFloat(av.percentageChange) || 0))}%`,
+                }}
+              />
             </div>
           </div>
 
@@ -270,19 +298,17 @@ export default function Sha256Visualizer() {
   const [activeTab, setActiveTab] = useState('interact');
 
   const [shaInput, setShaInput] = useState('Hello, World!');
-  const [shaResult, setShaResult] = useState('');
   const [i1, setI1] = useState('HanTruong');
   const [i2, setI2] = useState('TruongHan');
-  const [av, setAv] = useState(null);
+  const shaResult = useMemo(() => calculateSHA256(shaInput), [shaInput]);
+  const av = useMemo(
+    () => (i1 && i2 ? checkAvalancheEffect(i1, i2) : null),
+    [i1, i2]
+  );
   const [powData, setPowData] = useState('Block #1 Data');
   const [prefix, setPrefix] = useState('0000');
   const [pow, setPow] = useState(null);
   const [mining, setMining] = useState(false);
-
-  useEffect(() => setShaResult(calculateSHA256(shaInput)), [shaInput]);
-  useEffect(() => {
-    if (i1 && i2) setAv(checkAvalancheEffect(i1, i2));
-  }, [i1, i2]);
 
   const handleMine = () => {
     setMining(true);
@@ -368,6 +394,10 @@ export default function Sha256Visualizer() {
               <div className="sha256-stat">
                 <span>Nonce tìm được</span>
                 <strong>{pow.nonce}</strong>
+              </div>
+              <div className="sha256-stat">
+                <span>Số lần thử</span>
+                <strong>{new Intl.NumberFormat('vi-VN').format(pow.nonce)}</strong>
               </div>
               <div className="sha256-stat">
                 <span>Thời gian</span>

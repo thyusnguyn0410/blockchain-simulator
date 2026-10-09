@@ -1,6 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Block } from './coreBlockchain.js';
 import { mineBlockAsync } from './pow.js';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 export default function ProofOfWorkSimulator() {
   const [blockData, setBlockData] = useState('Khối đề xuất');
@@ -193,10 +203,15 @@ export default function ProofOfWorkSimulator() {
                 background: isFound ? 'var(--accent-green)' : 'var(--accent-orange)',
                 transition: isFound ? 'width 0.3s ease' : 'none',
               }}
+              role="progressbar"
+              aria-label="Tiến độ thử nonce"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(currentProgressPct)}
             />
           </div>
 
-          <div className="pow-kpi-grid">
+          <div className="pow-kpi-grid" aria-live="polite">
             <div className="pow-kpi">
               <div className="pow-kpi-value pow-accent">{formatNum(nonce)}</div>
               <div className="pow-kpi-label">nonce hiện tại</div>
@@ -257,6 +272,49 @@ export default function ProofOfWorkSimulator() {
       {/* BẢNG SO SÁNH ĐỘ KHÓ */}
       <div className="pow-table-card">
         <h3 className="pow-table-title">Vì sao độ khó lại quan trọng</h3>
+        <p className="pow-chart-note">
+          So sánh số hash kỳ vọng theo từng mức difficulty. Trục đứng dùng log₂ để thể hiện rõ mức tăng lũy thừa.
+        </p>
+        <div className="pow-difficulty-chart" role="img" aria-label="Biểu đồ số lần thử kỳ vọng theo độ khó">
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart
+              data={difficultyTable.map((row) => ({
+                ...row,
+                logAttempts: Math.log2(row.expected),
+              }))}
+              margin={{ top: 12, right: 12, left: 8, bottom: 4 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--theme-border)" />
+              <XAxis dataKey="diff" tickFormatter={(value) => `D${value}`} stroke="var(--theme-text-muted)" />
+              <YAxis
+                domain={[0, 24]}
+                tickFormatter={(value) => `2^${value}`}
+                stroke="var(--theme-text-muted)"
+              />
+              <Tooltip
+                contentStyle={{
+                  background: 'var(--theme-surface-solid)',
+                  border: '1px solid var(--theme-border-strong)',
+                  borderRadius: 'var(--radius-sm)',
+                  color: 'var(--theme-text-strong)',
+                }}
+                formatter={(_value, _name, item) => [
+                  `${formatNum(item.payload.expected)} lần thử`,
+                  `Difficulty ${item.payload.diff}`,
+                ]}
+                labelFormatter={() => 'Số lần thử kỳ vọng'}
+              />
+              <Bar dataKey="logAttempts" radius={[6, 6, 0, 0]}>
+                {difficultyTable.map((row) => (
+                  <Cell
+                    key={row.diff}
+                    fill={row.diff === difficulty ? 'var(--accent-cyan)' : 'var(--accent-purple)'}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
         <div className="pow-table-wrap">
           <table className="pow-table">
             <thead>
