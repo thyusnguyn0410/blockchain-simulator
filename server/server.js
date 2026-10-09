@@ -218,19 +218,25 @@ app.get('/', (req, res) => res.json({
 }));
 
 /** GET /status - Kiểm tra trạng thái node */
-app.get('/status', (req, res) => {
+app.get(['/status', '/api/status'], (req, res) => {
   const latest = blockchain.getLatestBlock();
   const peersList = typeof getSockets === 'function' ? getSockets() : [];
+  const chainValid = blockchain.isChainValid();
+  const mempoolCount = blockchain.mempool ? blockchain.mempool.length : 0;
   res.json({
     nodeId: NODE_ID,
     httpPort: HTTP_PORT,
     wsPort: WS_PORT,
     status: 'online',
-    height: latest ? (latest.index !== undefined ? latest.index : latest.height) : 0,
+    height: blockchain.chain.length,
+    isValid: chainValid,
+    chainValid,
+    isChainValid: chainValid,
     latestHash: latest ? latest.hash : '',
     peers: peersList.length,
     peerList: typeof getPeers === 'function' ? getPeers() : [],
-    mempoolSize: blockchain.mempool ? blockchain.mempool.length : 0,
+    mempoolCount,
+    mempoolSize: mempoolCount,
     difficulty: blockchain.difficulty,
     educationalOnly: true,
   });
