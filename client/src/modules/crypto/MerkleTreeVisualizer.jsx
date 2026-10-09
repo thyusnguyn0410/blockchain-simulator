@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { calculateSHA256 } from "./SHA-256.js";
 
 const INITIAL_TRANSACTIONS = [
@@ -94,6 +94,8 @@ export default function MerkleTree() {
     [builtTransactions, transactions]
   );
   const root = levels.at(-1)[0];
+  const isTreeDirty =
+    isTreeBuilt && JSON.stringify(transactions) !== JSON.stringify(builtTransactions);
 
   const nodesByLevel = useMemo(
     () =>
@@ -116,6 +118,24 @@ export default function MerkleTree() {
 
   const detailNode = nodesByLevel.flat().find((node) => node.id === activeDetailId);
   const activePath = detailNode ? getPathIds(detailNode, levels) : new Set();
+  const dirtyNodeIds = useMemo(() => {
+    if (!isTreeDirty) return new Set();
+    const previewLevels = buildLevels(transactions);
+    const changedIds = new Set();
+    const maxLevels = Math.max(levels.length, previewLevels.length);
+
+    for (let levelIndex = 0; levelIndex < maxLevels; levelIndex += 1) {
+      const oldLevel = levels[levelIndex] || [];
+      const previewLevel = previewLevels[levelIndex] || [];
+      const maxNodes = Math.max(oldLevel.length, previewLevel.length);
+      for (let nodeIndex = 0; nodeIndex < maxNodes; nodeIndex += 1) {
+        if (oldLevel[nodeIndex] !== previewLevel[nodeIndex]) {
+          changedIds.add(`${levelIndex}-${nodeIndex}`);
+        }
+      }
+    }
+    return changedIds;
+  }, [isTreeDirty, transactions, levels]);
 
   const handleNodeEnter = (nodeId) => {
     if (hideTimerRef.current) {
@@ -157,7 +177,6 @@ export default function MerkleTree() {
     const newTx = `User_${nextIdx} -> User_${nextIdx + 1}: ${(Math.random() * 5 + 0.1).toFixed(2)} coin`;
     setTransactions((prev) => {
       const next = [...prev, newTx];
-      if (isTreeBuilt) setBuiltTransactions(next);
       return next;
     });
     setActiveDetailId(null);
@@ -166,7 +185,6 @@ export default function MerkleTree() {
   const removeTransaction = (index) => {
     setTransactions((prev) => {
       const next = prev.filter((_, i) => i !== index);
-      if (isTreeBuilt) setBuiltTransactions(next);
       return next;
     });
     setActiveDetailId(null);
@@ -198,22 +216,42 @@ export default function MerkleTree() {
         <aside className="merkle-transactions">
           <h3>Dữ liệu khối</h3>
           <p>Danh sách các giao dịch đầu vào tạo nên Merkle Tree</p>
+          {isTreeDirty && (
+            <p className="merkle-dirty-notice" role="status">
+              Giao dịch đã thay đổi. Nút hash bị ảnh hưởng được tô đỏ; hãy dựng lại cây để cập nhật root.
+            </p>
+          )}
           <div className="merkle-transaction-list">
             {transactions.map((tx, idx) => (
               <div
                 className={`merkle-transaction ${
                   detailNode?.level === 0 && detailNode.index === idx ? "active" : ""
-                }`}
+                } ${isTreeDirty && builtTransactions[idx] !== tx ? "is-dirty" : ""}`}
                 key={`${tx}-${idx}`}
               >
-                <button
-                  type="button"
-                  className="merkle-transaction-main"
-                  onClick={() => handleNodeEnter(`0-${idx}`)}
-                >
-                  <span>{idx + 1}</span>
-                  <strong>{tx}</strong>
-                </button>
+                <div className="merkle-transaction-main">
+                  <button
+                    type="button"
+                    className="merkle-leaf-index"
+                    onClick={() => handleNodeEnter(`0-${idx}`)}
+                    aria-label={`Xem proof path của giao dịch ${idx + 1}`}
+                  >
+                    {idx + 1}
+                  </button>
+                  <input
+                    className="merkle-transaction-input"
+                    value={tx}
+                    onFocus={() => handleNodeEnter(`0-${idx}`)}
+                    onChange={(event) =>
+                      setTransactions((current) =>
+                        current.map((transaction, index) =>
+                          index === idx ? event.target.value : transaction
+                        )
+                      )
+                    }
+                    aria-label={`Nội dung giao dịch ${idx + 1}`}
+                  />
+                </div>
                 <button
                   type="button"
                   className="merkle-remove-button"
@@ -230,15 +268,16 @@ export default function MerkleTree() {
             <span>＋</span> Thêm giao dịch
           </button>
 
-          {!isTreeBuilt && (
+          {(!isTreeBuilt || isTreeDirty) && (
             <button className="merkle-build-button" type="button" onClick={buildTree}>
-              Xây dựng Cây Merkle
+              {isTreeBuilt ? "Dựng lại Cây Merkle" : "Xây dựng Cây Merkle"}
             </button>
           )}
 
           <div className="merkle-root-summary">
             <span>MERKLE ROOT (BLOCK HEADER)</span>
             <code>{isTreeBuilt ? shortHash(root) : "Chưa xây dựng"}</code>
+            {isTreeDirty && <small>Root hiện tại chưa phản ánh dữ liệu đã sửa</small>}
           </div>
         </aside>
 
@@ -291,7 +330,9 @@ export default function MerkleTree() {
                         <button
                           className={`merkle-node level-${node.level} ${
                             activeDetailId === node.id ? "selected" : ""
-                          } ${activePath.has(node.id) ? "is-path" : ""}`}
+                          } ${activePath.has(node.id) ? "is-path" : ""} ${
+                            dirtyNodeIds.has(node.id) ? "is-changed" : ""
+                          }`}
                           key={node.id}
                           type="button"
                           onMouseEnter={() => handleNodeEnter(node.id)}
