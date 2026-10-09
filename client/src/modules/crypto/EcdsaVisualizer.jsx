@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
-import { generateKeyPair, getPublicKeyFromPrivate, isValidPublicKey, signMessage, verifySignature } from './ECDSA.js';
+import { useState } from "react";
+import {
+  generateKeyPair,
+  getPublicKeyFromPrivate,
+  isValidPublicKey,
+  signMessage,
+  verifySignature,
+} from "./ECDSA.js";
 
 export default function EcdsaVisualizer() {
-  // State lưu trữ thông tin: Private Key, Public Key, Thông điệp người dùng nhập, Chữ ký số, Khóa kiểm tra & Kết quả
-  const [privKey, setPrivKey] = useState('');
-  const [pubKey, setPubKey] = useState('');
-  const [userMsg, setUserMsg] = useState('');
-  const [sig, setSig] = useState('');
-  const [testPriv, setTestPriv] = useState('');
-  const [customPub, setCustomPub] = useState('');
+  const [privKey, setPrivKey] = useState("");
+  const [pubKey, setPubKey] = useState("");
+  const [userMsg, setUserMsg] = useState("");
+  const [sig, setSig] = useState("");
+  const [testPriv, setTestPriv] = useState("");
+  const [customPub, setCustomPub] = useState("");
   const [result, setResult] = useState(null);
+  const [showPrivateKey, setShowPrivateKey] = useState(false);
+  const [showTestKey, setShowTestKey] = useState(false);
 
-  // Reset chữ ký & kết quả khi dữ liệu đầu vào thay đổi
-  const resetVerify = () => { setSig(''); setResult(null); };
+  const resetVerify = () => {
+    setSig("");
+    setResult(null);
+  };
 
-  // 1. Sinh khóa ngẫu nhiên
   const handleGenKeys = () => {
     const keys = generateKeyPair();
     setPrivKey(keys.privateKey);
@@ -22,77 +30,176 @@ export default function EcdsaVisualizer() {
     resetVerify();
   };
 
-  // 2. Nhập/Sửa Private Key thủ công (Tự động trích xuất Public Key nếu Private Key hợp lệ)
-  const handlePrivChange = (e) => {
-    const val = e.target.value.trim();
-    setPrivKey(val);
-    setPubKey(val ? getPublicKeyFromPrivate(val) || 'Private Key không hợp lệ!' : '');
+  const handlePrivChange = (event) => {
+    const value = event.target.value.trim();
+    setPrivKey(value);
+    setPubKey(value ? getPublicKeyFromPrivate(value) || "Private Key không hợp lệ!" : "");
     resetVerify();
   };
 
-  // 3. Ký Thông Điệp do người dùng tự gõ
   const handleSign = () => {
-    if (!privKey || !userMsg.trim()) return alert('Vui lòng nhập Private Key và Thông điệp!');
+    if (!privKey || !userMsg.trim()) return alert("Vui lòng nhập Private Key và Thông điệp!");
     const signature = signMessage(privKey, userMsg);
-    signature ? (setSig(signature), setResult(null)) : alert('Ký thất bại! Kiểm tra lại Private Key.');
+    signature ? (setSig(signature), setResult(null)) : alert("Ký thất bại! Kiểm tra lại Private Key.");
   };
 
-  // 4. Xác thực chữ ký số
   const handleVerify = () => {
-    if (!userMsg.trim() || !sig) return alert('Vui lòng nhập thông điệp và ký trước!');
-    // Lấy Public Key đối chiếu (Ưu tiên: Public Key tự dán -> Trích xuất từ Private Key kiểm tra -> Khóa ở Bước 1)
-    const pubToTest = customPub.trim() || getPublicKeyFromPrivate(testPriv.trim() || privKey);
-
-    if (!pubToTest || !isValidPublicKey(pubToTest)) return alert('Khóa dùng để kiểm tra không hợp lệ!');
-    setResult(verifySignature(pubToTest, userMsg, sig));
+    if (!userMsg.trim() || !sig) return alert("Vui lòng nhập thông điệp và ký trước!");
+    const publicKeyToTest = customPub.trim() || getPublicKeyFromPrivate(testPriv.trim() || privKey);
+    if (!publicKeyToTest || !isValidPublicKey(publicKeyToTest)) {
+      return alert("Khóa dùng để kiểm tra không hợp lệ!");
+    }
+    setResult(verifySignature(publicKeyToTest, userMsg, sig));
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '650px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h2 style={{ textAlign: 'center', color: '#2c3e50' }}>🔑 Mô Phỏng Chữ Ký Số ECDSA</h2>
-
-      {/* BƯỚC 1: QUẢN LÝ KHÓA (Cho phép tự nhập hoặc sinh ngẫu nhiên) */}
-      <div style={cardStyle}>
-        <h3>1. Khởi Tạo / Nhập Khóa</h3>
-        <button onClick={handleGenKeys} style={{ ...btnStyle, bg: '#27ae60' }}> Sinh Khóa Ngẫu Nhiên</button>
-        <label style={lblStyle}>Private Key (Tự gõ/dán chuỗi Hex 64 ký tự vào đây):</label>
-        <input type="text" value={privKey} onChange={handlePrivChange} placeholder="Nhập hoặc dán Private Key..." style={inputStyle} />
-        <label style={lblStyle}>Public Key (Tự động tính từ Private Key):</label>
-        <textarea value={pubKey} readOnly rows={2} style={{ ...inputStyle, fontFamily: 'monospace', bg: '#f8f9fa' }} />
+    <div className="ecdsa-visualizer">
+      <div className="ecdsa-intro">
+        <span className="ecdsa-kicker">CHỮ KÝ SỐ / SECP256K1</span>
+        <p>
+          Private Key ký dữ liệu; Public Key giúp các node xác minh nguồn gốc và tính toàn vẹn
+          của thông điệp.
+        </p>
       </div>
 
-      {/* BƯỚC 2: TỰ TẠO THÔNG ĐIỆP & KÝ */}
-      <div style={cardStyle}>
-        <h3>2. Nhập Thông Điệp & Ký</h3>
-        <label style={lblStyle}>Nội dung thông điệp (Tự do gõ nội dung bất kỳ):</label>
-        <textarea value={userMsg} onChange={(e) => { setUserMsg(e.target.value); resetVerify(); }} placeholder="Gõ thông điệp của bạn..." rows={2} style={inputStyle} />
-        <button onClick={handleSign} style={{ ...btnStyle, bg: '#2980b9', width: '100%', marginTop: '8px' }}>✍️ Ký Thông Điệp</button>
-        {sig && <div style={boxStyle}><b>Chữ ký số (DER Hex):</b><div style={codeStyle}>{sig}</div></div>}
-      </div>
+      <section className="ecdsa-step" aria-labelledby="ecdsa-key-title">
+        <div className="ecdsa-step-heading">
+          <span className="ecdsa-step-number">01</span>
+          <div>
+            <h3 id="ecdsa-key-title">Tạo khóa</h3>
+            <p>Tạo cặp khóa mới hoặc nhập private key để suy ra public key.</p>
+          </div>
+        </div>
+        <button className="ui-button outline-button" type="button" onClick={handleGenKeys}>
+          Tạo cặp khóa ngẫu nhiên
+        </button>
+        <label className="ecdsa-label" htmlFor="ecdsa-private-key">Private Key</label>
+        <div className="ecdsa-secret-field">
+          <input
+            id="ecdsa-private-key"
+            className="ecdsa-input ecdsa-mono"
+            type={showPrivateKey ? "text" : "password"}
+            value={privKey}
+            onChange={handlePrivChange}
+            placeholder="Nhập private key hex (64 ký tự)"
+            autoComplete="off"
+            spellCheck="false"
+          />
+          <button
+            className="ecdsa-visibility-button"
+            type="button"
+            onClick={() => setShowPrivateKey((visible) => !visible)}
+            aria-label={showPrivateKey ? "Ẩn Private Key" : "Hiện Private Key"}
+          >
+            {showPrivateKey ? "Ẩn" : "Hiện"}
+          </button>
+        </div>
+        <label className="ecdsa-label" htmlFor="ecdsa-public-key">Public Key</label>
+        <textarea
+          id="ecdsa-public-key"
+          className="ecdsa-input ecdsa-mono"
+          value={pubKey}
+          readOnly
+          rows={2}
+          placeholder="Public key sẽ xuất hiện sau khi tạo khóa"
+        />
+      </section>
 
-      {/* BƯỚC 3: XÁC THỰC CHỮ KÝ */}
-      <div style={cardStyle}>
-        <h3>3. Kiểm Tra & Xác Thực</h3>
-        <input type="text" value={testPriv} onChange={(e) => { setTestPriv(e.target.value); setResult(null); }} placeholder="Dán Private Key đối chiếu (hoặc để trống)..." style={inputStyle} />
-        <input type="text" value={customPub} onChange={(e) => { setCustomPub(e.target.value); setResult(null); }} placeholder="Hoặc dán trực tiếp Public Key Hex đối chiếu..." style={{ ...inputStyle, marginTop: '6px' }} />
-        <button onClick={handleVerify} style={{ ...btnStyle, bg: '#8e44ad', width: '100%', marginTop: '8px' }}>🔍 Xác Thực Chữ Ký</button>
-
-        {result !== null && (
-          <div style={{ ...boxStyle, borderLeftColor: result ? '#2ecc71' : '#e74c3c', bg: result ? '#e8f8f5' : '#fadbd8' }}>
-            <b style={{ color: result ? '#27ae60' : '#c0392b' }}>
-              {result ? 'CHỮ KÝ HỢP LỆ (Khóa chính xác & Dữ liệu nguyên vẹn)' : 'CHỮ KÝ KHÔNG HỢP LỆ'}
-            </b>
+      <section className="ecdsa-step" aria-labelledby="ecdsa-sign-title">
+        <div className="ecdsa-step-heading">
+          <span className="ecdsa-step-number">02</span>
+          <div>
+            <h3 id="ecdsa-sign-title">Ký thông điệp</h3>
+            <p>Ký nội dung bằng Private Key. Thay đổi dù chỉ một ký tự sẽ làm chữ ký mất hiệu lực.</p>
+          </div>
+        </div>
+        <label className="ecdsa-label" htmlFor="ecdsa-message">Thông điệp</label>
+        <textarea
+          id="ecdsa-message"
+          className="ecdsa-input"
+          value={userMsg}
+          onChange={(event) => {
+            setUserMsg(event.target.value);
+            resetVerify();
+          }}
+          placeholder="Nhập nội dung cần ký"
+          rows={3}
+        />
+        <button className="ui-button primary-button" type="button" onClick={handleSign}>
+          ✍ Ký thông điệp
+        </button>
+        {sig && (
+          <div className="ecdsa-output">
+            <span className="ecdsa-label">Chữ ký số (DER Hex)</span>
+            <code className="ecdsa-code">{sig}</code>
           </div>
         )}
-      </div>
+      </section>
+
+      <section className="ecdsa-step" aria-labelledby="ecdsa-verify-title">
+        <div className="ecdsa-step-heading">
+          <span className="ecdsa-step-number">03</span>
+          <div>
+            <h3 id="ecdsa-verify-title">Xác minh chữ ký</h3>
+            <p>Đối chiếu bằng Public Key để xác nhận người gửi và nội dung không bị thay đổi.</p>
+          </div>
+        </div>
+        <label className="ecdsa-label" htmlFor="ecdsa-test-private-key">
+          Private Key đối chiếu (không bắt buộc)
+        </label>
+        <div className="ecdsa-secret-field">
+          <input
+            id="ecdsa-test-private-key"
+            className="ecdsa-input ecdsa-mono"
+            type={showTestKey ? "text" : "password"}
+            value={testPriv}
+            onChange={(event) => {
+              setTestPriv(event.target.value);
+              setResult(null);
+            }}
+            placeholder="Để trống để dùng khóa hiện tại"
+            autoComplete="off"
+            spellCheck="false"
+          />
+          <button
+            className="ecdsa-visibility-button"
+            type="button"
+            onClick={() => setShowTestKey((visible) => !visible)}
+            aria-label={showTestKey ? "Ẩn Private Key đối chiếu" : "Hiện Private Key đối chiếu"}
+          >
+            {showTestKey ? "Ẩn" : "Hiện"}
+          </button>
+        </div>
+        <label className="ecdsa-label" htmlFor="ecdsa-test-public-key">
+          Hoặc Public Key đối chiếu
+        </label>
+        <input
+          id="ecdsa-test-public-key"
+          className="ecdsa-input ecdsa-mono"
+          type="text"
+          value={customPub}
+          onChange={(event) => {
+            setCustomPub(event.target.value);
+            setResult(null);
+          }}
+          placeholder="Dán public key hex"
+          autoComplete="off"
+          spellCheck="false"
+        />
+        <button className="ui-button primary-button" type="button" onClick={handleVerify}>
+          Xác minh chữ ký
+        </button>
+        {result !== null && (
+          <div
+            className={`ecdsa-verification ${result ? "valid" : "invalid"}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span aria-hidden="true">{result ? "✓" : "!"}</span>
+            <strong>{result ? "VALID · Chữ ký hợp lệ" : "INVALID · Chữ ký không hợp lệ"}</strong>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
-
-// Inline Styles tối ưu
-const cardStyle = { background: '#fff', padding: '14px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', marginBottom: '12px' };
-const lblStyle = { display: 'block', fontSize: '12px', fontWeight: 'bold', margin: '6px 0 2px' };
-const inputStyle = { width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box' };
-const btnStyle = { color: '#fff', border: 'none', padding: '8px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', backgroundColor: props => props.bg };
-const boxStyle = { background: '#f8f9fa', padding: '8px', borderRadius: '4px', borderLeft: '4px solid #3498db', marginTop: '8px', fontSize: '13px' };
-const codeStyle = { fontFamily: 'monospace', color: '#d35400', wordBreak: 'break-all', marginTop: '4px' };
