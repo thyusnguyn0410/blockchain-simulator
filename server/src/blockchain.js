@@ -427,8 +427,8 @@ class Blockchain {
   /**
    * Kiểm tra tính toàn vẹn của chuỗi (Hỗ trợ alias isChainValid của Client)
    */
-  isChainValid() {
-    return isValidChain(this.chain);
+  isChainValid(chain = this.chain) {
+    return isValidChain(chain);
   }
 
   /**
