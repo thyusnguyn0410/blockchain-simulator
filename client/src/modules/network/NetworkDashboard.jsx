@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Card from '../../components/Card.jsx';
 import Button from '../../components/Button.jsx';
 import NodeCard from './NodeCard.jsx';
 import LiveLogViewer from './LiveLogViewer.jsx';
-import { useWebSocket } from '../../hooks/useWebSocket.js';
 
 const STORAGE_KEY = 'blockchain-sim:registered-nodes';
 const DEFAULT_NODES = ['localhost:3001', 'localhost:3002', 'localhost:3003'];
@@ -64,8 +63,71 @@ export default function NetworkDashboard() {
   };
 
   // Trạm WebSocket trung gian
-  const { status: wsStatus, address: wsAddress, messages, connect, disconnect, clear } = useWebSocket();
+  const socketRef = useRef(null);
+  const [wsStatus, setWsStatus] = useState('disconnected');
+  const [wsAddress, setWsAddress] = useState('');
+  const [messages, setMessages] = useState([]);
   const [wsInput, setWsInput] = useState(guessWsAddress(nodes[0] || DEFAULT_NODES[0]));
+
+  useEffect(() => () => {
+    socketRef.current?.close();
+  }, []);
+
+  const connect = (address) => {
+    const target = address.trim();
+    if (!target) return;
+
+    socketRef.current?.close();
+    setWsAddress(target);
+    setWsStatus('connecting');
+
+    try {
+      const socket = new WebSocket(target);
+      socketRef.current = socket;
+      socket.addEventListener('open', () => {
+        if (socketRef.current === socket) setWsStatus('connected');
+      });
+      socket.addEventListener('message', (event) => {
+        if (socketRef.current !== socket) return;
+        let line = event.data;
+        let tone = 'other';
+        try {
+          const payload = JSON.parse(event.data);
+          line = typeof payload === 'string' ? payload : JSON.stringify(payload);
+          const type = `${payload.type || ''} ${payload.event || ''}`.toLowerCase();
+          if (type.includes('tx') || type.includes('mempool')) tone = 'tx';
+          else if (type.includes('block')) tone = 'block';
+          else if (type.includes('sync') || type.includes('consensus')) tone = 'query';
+          else if (type.includes('reject') || type.includes('error')) tone = 'error';
+        } catch {
+          // Keep non-JSON WebSocket frames readable in the inspector.
+        }
+        setMessages((current) => [...current, { at: Date.now(), line, tone }].slice(-200));
+      });
+      socket.addEventListener('close', () => {
+        if (socketRef.current === socket) setWsStatus('disconnected');
+      });
+      socket.addEventListener('error', () => {
+        if (socketRef.current === socket) setWsStatus('error');
+      });
+    } catch (error) {
+      socketRef.current = null;
+      setWsStatus('error');
+      setMessages((current) => [
+        ...current,
+        { at: Date.now(), line: `Không thể kết nối WebSocket: ${error.message}`, tone: 'error' },
+      ].slice(-200));
+    }
+  };
+
+  const disconnect = () => {
+    const socket = socketRef.current;
+    socketRef.current = null;
+    socket?.close();
+    setWsStatus('disconnected');
+  };
+
+  const clear = () => setMessages([]);
 
   const useDefaultServer = () => {
     const defaultAddr = guessWsAddress(nodes[0] || DEFAULT_NODES[0]);
