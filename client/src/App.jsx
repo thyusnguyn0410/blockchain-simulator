@@ -347,8 +347,8 @@ function App() {
 
             <div id="blockheader-tool">
               <Card
-                title="Block header viewer"
-                description="Inspect, verify, and safely demonstrate chain integrity"
+                title="Trình xem Block Header"
+                description="Kiểm tra, xác minh và minh họa tính toàn vẹn của chuỗi"
                 className="tool-card"
               >
                 <BlockHeaderViewer />
