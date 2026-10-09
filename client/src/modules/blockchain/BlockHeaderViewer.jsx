@@ -113,15 +113,17 @@ export default function BlockHeaderViewer() {
                 statusLabel = '✖ Dữ liệu đã bị sửa';
                 statusClass = 'bhv-status-invalid';
               } else if (!report.linkOk) {
-                statusLabel = '✖ Đứt mắt xích';
-                statusClass = 'bhv-status-warning';
+                statusLabel = '✖ INVALID · Đứt mắt xích';
+                statusClass = 'bhv-status-invalid';
               }
 
               return (
-                <div
-                  key={idx}
+                <React.Fragment key={idx}>
+                <button
+                  type="button"
                   onClick={() => handleSelectBlock(idx)}
                   className={`bhv-block-card ${isSelected ? 'bhv-block-card-selected' : ''} ${!report.valid ? 'bhv-block-card-invalid' : ''}`}
+                  aria-pressed={isSelected}
                 >
                   <div className="bhv-block-card-header">
                     <div className="bhv-block-card-title-wrap">
@@ -145,7 +147,14 @@ export default function BlockHeaderViewer() {
                     <span className="bhv-meta-diff">Diff: {block.difficulty}</span>
                     <span>Txs: {block.transactions?.length || 0}</span>
                   </div>
-                </div>
+                </button>
+                {idx < blocks.length - 1 && (
+                  <div className={`bhv-chain-link ${validationReport[idx + 1]?.linkOk ? 'bhv-chain-link-valid' : 'bhv-chain-link-invalid'}`} aria-label={validationReport[idx + 1]?.linkOk ? 'Liên kết khối hợp lệ' : 'INVALID: liên kết khối bị đứt'}>
+                    <span aria-hidden="true">→</span>
+                    <span>{validationReport[idx + 1]?.linkOk ? 'Liên kết hợp lệ' : 'INVALID'}</span>
+                  </div>
+                )}
+                </React.Fragment>
               );
             })}
           </div>

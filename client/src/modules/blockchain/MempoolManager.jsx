@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 // IMPORT CÁC MODULE THUẬT TOÁN
 import { generateKeyPair, signMessage, getAddressFromPublicKey, canonical } from '../crypto/ECDSA.js';
@@ -751,7 +751,10 @@ export default function MempoolManager({ apiUrl }) {
                           {shortAddr(tx.from)}... · Phí {tx.fee}
                         </div>
                       </div>
-                      <div className="mp-tx-amount-out">-{amt(tx.amount)}</div>
+                      <div className="mp-row-gap-sm">
+                        <span className="mp-status-badge mp-status-pending">Đang chờ</span>
+                        <div className="mp-tx-amount-out">-{amt(tx.amount)}</div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -853,6 +856,7 @@ export default function MempoolManager({ apiUrl }) {
                                   </div>
 
                                   <div className="mp-row-gap-sm">
+                                    <span className="mp-status-badge mp-status-packed">Đã đóng gói</span>
                                     {tx.type === 'Coinbase' ? (
                                       <span className="mp-reward-badge">↖ Thưởng khối</span>
                                     ) : (
