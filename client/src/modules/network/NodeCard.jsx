@@ -5,7 +5,11 @@ import Button from '../../components/Button.jsx';
 import { usePolling } from '../../hooks/usePolling.js';
 
 export default function NodeCard({ address, onRemove }) {
-  const { data, error } = usePolling(`http://${address}/status`, { interval: 2000 });
+  const nodeBaseUrl = `${/^https?:\/\//i.test(address) ? '' : 'http://'}${address
+    .replace(/^https?:\/\//i, '')
+    .replace(/\/status\/?$/i, '')
+    .replace(/\/+$/, '')}`;
+  const { data, error } = usePolling(nodeBaseUrl, { interval: 2000 });
 
   const [mining, setMining] = useState(false);
   const [lastMined, setLastMined] = useState(null);
@@ -19,7 +23,7 @@ export default function NodeCard({ address, onRemove }) {
     const start = performance.now();
 
     try {
-      const res = await fetch(`http://${address}/mineBlock`, {
+      const res = await fetch(`${nodeBaseUrl}/mineBlock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -87,7 +91,7 @@ export default function NodeCard({ address, onRemove }) {
         </>
       ) : (
         <div className="network-offline-message" role="status">
-          OFFLINE — không kết nối được ({error ?? 'máy chủ chưa bật'})
+          OFFLINE — không kết nối được ({typeof error === 'string' ? error : error?.message || 'máy chủ chưa bật'})
         </div>
       )}
     </Card>
