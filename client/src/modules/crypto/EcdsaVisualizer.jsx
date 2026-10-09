@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateKeyPair, getPublicKeyFromPrivate, isValidPublicKey, signMessage, verifySignature } from '../../ECDSA.js';
+import { generateKeyPair, getPublicKeyFromPrivate, isValidPublicKey, signMessage, verifySignature } from './ECDSA.js';
 
 export default function EcdsaVisualizer() {
   // State lưu trữ thông tin: Private Key, Public Key, Thông điệp người dùng nhập, Chữ ký số, Khóa kiểm tra & Kết quả

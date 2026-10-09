@@ -5,6 +5,9 @@ import BlockHeaderViewer from "./modules/blockchain/BlockHeaderViewer";
 import MempoolManager from "./modules/blockchain/MempoolManager";
 import ProofOfWorkSimulator from "./modules/blockchain/ProofOfWorkSimulator";
 import MerkleTree from "./modules/crypto/MerkleTreeVisualizer.jsx";
+import EcdsaVisualizer from "./modules/crypto/EcdsaVisualizer.jsx";
+import NetworkDashboard from "./modules/network/NetworkDashboard.jsx";
+import AttackSimulator from "./components/AttackSimulator.jsx";
 import ChatBot from "./components/ChatBot.jsx";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { usePolling } from "./hooks/usePolling";
@@ -17,6 +20,19 @@ const formatNumber = (value) => new Intl.NumberFormat("en-US").format(value || 0
 
 const shortHash = (value = "") =>
   value.length > 18 ? `${value.slice(0, 10)}…${value.slice(-6)}` : value || "—";
+
+const flowSteps = [
+  { label: "Alice tạo ví", module: "ECDSA", icon: "01" },
+  { label: "Ký giao dịch", module: "ECDSA", icon: "02" },
+  { label: "Broadcast giao dịch", module: "Network", icon: "03" },
+  { label: "Xác minh chữ ký", module: "ECDSA", icon: "04" },
+  { label: "Đưa vào Mempool", module: "Mempool", icon: "05" },
+  { label: "Tạo Merkle Root", module: "Merkle", icon: "06" },
+  { label: "Đào Proof of Work", module: "Proof of Work", icon: "07" },
+  { label: "Broadcast Block", module: "Network", icon: "08" },
+  { label: "Đồng thuận mạng", module: "Network", icon: "09" },
+  { label: "Cập nhật Blockchain", module: "Block Header", icon: "10" },
+];
 
 const getTransactions = (blocks = [], mempool = []) => {
   const confirmed = blocks.flatMap((block) =>
@@ -186,9 +202,8 @@ function TransactionsPanel({ transactions }) {
 }
 
 function App() {
-  const [activeSection, setActiveSection] = useState("Dashboard");
+  const [activeSection, setActiveSection] = useState("Tổng quan");
   const [showChat, setShowChat] = useState(false);
-  const [theme, setTheme] = useState("dark");
 
   const { blocks = [], mempool = [], logs = [], connection, latestBlock } = useWebSocket();
   const { data: nodeStatus, activeUrl, loading, error, refresh, onlineNodeCount } = usePolling();
@@ -200,12 +215,16 @@ function App() {
   const handleNavigate = (label) => {
     setActiveSection(label);
     const targetMap = {
-      Dashboard: "dashboard-overview",
-      Blockchain: "blockchain-tools",
-      Transactions: "transactions",
-      Mining: "pow-tool",
-      "Merkle Tree": "merkle-tree-tab",
-      "Network Nodes": "network-status",
+      "Tổng quan": "dashboard-overview",
+      "SHA-256": "sha256-tool",
+      ECDSA: "ecdsa-tool",
+      Merkle: "merkle-tree-tab",
+      "Block Header": "blockheader-tool",
+      Mempool: "mempool-tool",
+      "Proof of Work": "pow-tool",
+      Dashboard: "network-dashboard",
+      Network: "network-dashboard",
+      "Attack Simulator": "attack-simulator",
     };
     const target = document.getElementById(targetMap[label] || "dashboard-overview");
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -216,27 +235,49 @@ function App() {
     refresh();
   };
 
-  const handleThemeToggle = () => {
-    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
-  };
-
   return (
     <MainLayout
       activeItem={activeSection}
       onNavigate={handleNavigate}
       connection={connection}
-      theme={theme}
-      onThemeToggle={handleThemeToggle}
     >
       <div className="dashboard" id="dashboard-overview">
         <header className="page-header">
           <div>
-            <span className="page-label">BLOCKCHAIN SIMULATOR / CONTROL ROOM</span>
-            <h1>Network dashboard</h1>
-            <p>Observe blocks, transactions, and node health from one focused workspace.</p>
+            <span className="page-label">BLOCKCHAIN SIMULATOR / LEARNING PATH</span>
+            <h1>Tổng quan Blockchain</h1>
+            <p>Theo dõi luồng giao dịch từ ví Alice đến khi các node thống nhất block mới.</p>
           </div>
-          <Button onClick={handleNewSimulation}>↻ Refresh simulation</Button>
+          <Button onClick={handleNewSimulation} aria-label="Làm mới trạng thái mô phỏng">
+            ↻ Làm mới mô phỏng
+          </Button>
         </header>
+
+        <section className="overview-flow" aria-labelledby="overview-flow-title">
+          <div className="overview-flow-heading">
+            <div>
+              <span className="page-label">10 BƯỚC END-TO-END</span>
+              <h2 id="overview-flow-title">Từ giao dịch đến đồng thuận</h2>
+            </div>
+            <p>Bấm vào một bước để mở công cụ minh họa tương ứng.</p>
+          </div>
+          <ol className="flow-steps">
+            {flowSteps.map((step) => (
+              <li key={step.icon}>
+                <button
+                  type="button"
+                  className="flow-step"
+                  onClick={() => handleNavigate(step.module)}
+                  aria-label={`Bước ${step.icon}: ${step.label}. Mở module ${step.module}`}
+                >
+                  <span className="flow-step-number">{step.icon}</span>
+                  <strong>{step.label}</strong>
+                  <span className="flow-step-module">{step.module}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
 
         <section className="stats-grid" aria-label="Network metrics">
           <MetricCard
@@ -347,6 +388,41 @@ function App() {
           <div className="dashboard-panel merkle-panel">
             <MerkleTree />
           </div>
+        </section>
+
+        <section id="ecdsa-tool" className="tool-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">CRYPTOGRAPHY</span>
+              <h2>Chữ ký số ECDSA</h2>
+              <p>Tạo cặp khóa, ký thông điệp và xác minh dữ liệu có toàn vẹn hay không.</p>
+            </div>
+          </div>
+          <Card className="module-card">
+            <EcdsaVisualizer />
+          </Card>
+        </section>
+
+        <section id="network-dashboard" className="tool-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">NETWORK</span>
+              <h2>Dashboard mạng</h2>
+              <p>Theo dõi node, kết nối P2P, lưu lượng WebSocket và log đồng thuận.</p>
+            </div>
+          </div>
+          <NetworkDashboard />
+        </section>
+
+        <section id="attack-simulator" className="tool-section">
+          <div className="section-heading">
+            <div>
+              <span className="page-label">SECURITY LAB</span>
+              <h2>Attack Simulator</h2>
+              <p>Chạy các tình huống tấn công mẫu và quan sát cơ chế phát hiện của blockchain.</p>
+            </div>
+          </div>
+          <AttackSimulator />
         </section>
       </div>
 
