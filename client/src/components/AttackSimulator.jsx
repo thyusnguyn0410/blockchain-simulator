@@ -55,6 +55,9 @@ const scenarios = [
 
 export default function AttackSimulator() {
   const [results, setResults] = useState({});
+  const [enabledScenarios, setEnabledScenarios] = useState(() => (
+    Object.fromEntries(scenarios.map(({ id }) => [id, true]))
+  ));
 
   const runScenario = (scenario) => {
     try {
@@ -78,17 +81,34 @@ export default function AttackSimulator() {
     <div className="attack-grid">
       {scenarios.map((scenario) => {
         const result = results[scenario.id];
+        const enabled = enabledScenarios[scenario.id];
         return (
-          <article className="attack-card" key={scenario.id}>
-            <div className="attack-card-heading">
-              <span className="attack-icon" aria-hidden="true">⚠</span>
-              <h3>{scenario.title}</h3>
+          <article className={`attack-card ${enabled ? '' : 'is-disabled'}`} key={scenario.id}>
+            <div className="attack-card-top">
+              <div className="attack-card-heading">
+                <span className="attack-icon" aria-hidden="true">⚠</span>
+                <h3>{scenario.title}</h3>
+              </div>
+              <button
+                type="button"
+                className="attack-toggle"
+                aria-pressed={enabled}
+                aria-label={`${enabled ? 'Tắt' : 'Bật'} kịch bản ${scenario.title}`}
+                onClick={() => setEnabledScenarios((current) => ({
+                  ...current,
+                  [scenario.id]: !current[scenario.id],
+                }))}
+              >
+                <span className={`attack-toggle-indicator ${enabled ? 'is-on' : ''}`} aria-hidden="true" />
+                {enabled ? 'Đang bật' : 'Đang tắt'}
+              </button>
             </div>
             <p>{scenario.description}</p>
             <button
               type="button"
               className="ui-button outline-button"
               onClick={() => runScenario(scenario)}
+              disabled={!enabled}
             >
               Chạy kịch bản
             </button>
