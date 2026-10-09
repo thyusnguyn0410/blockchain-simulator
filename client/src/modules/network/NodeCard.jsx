@@ -36,24 +36,21 @@ export default function NodeCard({ address, onRemove }) {
   };
 
   return (
-    <Card className="relative">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ 
-            width: '10px', 
-            height: '10px', 
-            borderRadius: '50%', 
-            background: online ? '#34d399' : '#f87171' 
-          }} />
-          <div>
-            <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.9rem' }}>{data?.nodeId ?? '(chưa xác định)'}</div>
-            <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>{address}</div>
+    <Card className="network-node-card">
+      <div className="network-node-header">
+        <div className="network-node-identity">
+          <span className={`network-node-dot ${online ? 'is-online' : 'is-offline'}`} aria-hidden="true" />
+          <div className="network-node-details">
+            <div className="network-node-name">{data?.nodeId ?? '(chưa xác định)'}</div>
+            <div className="network-node-address">{address}</div>
           </div>
         </div>
         <button
+          type="button"
           onClick={() => onRemove(address)}
-          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.8rem' }}
+          className="network-remove-button"
           title="Bỏ theo dõi Node này"
+          aria-label={`Bỏ theo dõi node ${address}`}
         >
           ✕
         </button>
@@ -61,16 +58,16 @@ export default function NodeCard({ address, onRemove }) {
 
       {online ? (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem', marginBottom: '14px' }}>
-            <Stat label="Status" value="ONLINE" valueClass="text-emerald-400" />
+          <div className="network-node-stats">
+            <Stat label="Status" value="ONLINE" valueClass="network-value-online" />
             <Stat label="Height" value={data.height} />
             <Stat
               label="Chain"
               value={data.isChainValid ? 'VALID' : 'INVALID'}
-              valueClass={data.isChainValid ? 'text-emerald-400' : 'text-red-400'}
+              valueClass={data.isChainValid ? 'network-value-online' : 'network-value-error'}
             />
             <Stat label="Mempool" value={data.mempoolSize} />
-            <Stat label="Peers" value={data.peers} style={{ gridColumn: 'span 2' }} />
+            <Stat label="Peers" value={data.peers} className="network-stat-wide" />
           </div>
 
           <Button onClick={handleMine} loading={mining} disabled={mining} variant="primary">
@@ -78,18 +75,18 @@ export default function NodeCard({ address, onRemove }) {
           </Button>
 
           {lastMined && (
-            <div style={{ marginTop: '12px', fontSize: '0.75rem', fontFamily: 'monospace', color: '#6ee7b7', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '8px' }}>
+            <div className="network-mine-result" role="status">
               <div>Đã mine Block <strong>#{lastMined.index}</strong> — nonce={lastMined.nonce}</div>
-              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#94a3b8' }} title={lastMined.hash}>
+              <div className="network-mined-hash" title={lastMined.hash}>
                 hash={lastMined.hash}
               </div>
-              <div style={{ color: '#94a3b8' }}>~{lastMined.elapsedMs}ms</div>
+              <div className="network-mine-time">~{lastMined.elapsedMs}ms</div>
             </div>
           )}
-          {mineError && <div style={{ marginTop: '10px', fontSize: '0.75rem', color: '#f87171' }}>{mineError}</div>}
+          {mineError && <div className="network-error" role="alert">{mineError}</div>}
         </>
       ) : (
-        <div style={{ fontSize: '0.85rem', color: '#f87171' }}>
+        <div className="network-offline-message" role="status">
           OFFLINE — không kết nối được ({error ?? 'máy chủ chưa bật'})
         </div>
       )}
@@ -97,11 +94,11 @@ export default function NodeCard({ address, onRemove }) {
   );
 }
 
-function Stat({ label, value, valueClass = '', style = {} }) {
+function Stat({ label, value, valueClass = '', className = '' }) {
   return (
-    <div style={style}>
-      <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{label}</div>
-      <div className={valueClass} style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{value ?? '—'}</div>
+    <div className={`network-stat ${className}`}>
+      <div className="network-stat-label">{label}</div>
+      <div className={`network-stat-value ${valueClass}`}>{value ?? '—'}</div>
     </div>
   );
 }

@@ -8,8 +8,19 @@ const MAX_LINES = 400;
 export default function LiveLogViewer({ nodes }) {
   const [lines, setLines] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [logFilter, setLogFilter] = useState('all');
   const cursorsRef = useRef({});
   const containerRef = useRef(null);
+  const filters = [
+    { id: 'all', label: 'Tất cả' },
+    { id: 'tx', label: 'Tx' },
+    { id: 'block', label: 'Block' },
+    { id: 'sync', label: 'Sync' },
+    { id: 'reject', label: 'Reject' },
+  ];
+  const visibleLines = lines.filter((entry) => (
+    logFilter === 'all' || classifyLog(entry.line) === logFilter
+  ));
 
   useEffect(() => {
     let cancelled = false;
@@ -66,8 +77,8 @@ export default function LiveLogViewer({ nodes }) {
       title="Live Log — Mạng & Đồng thuận"
       description="Chu trình Mempool → Block → PoW → Broadcast → Consensus gộp từ tất cả Node"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#94a3b8' }}>
+      <div className="network-live-toolbar">
+        <label className="network-auto-scroll">
           <input
             type="checkbox"
             checked={autoScroll}
@@ -75,25 +86,36 @@ export default function LiveLogViewer({ nodes }) {
           />
           Tự cuộn xuống dòng mới nhất
         </label>
-        <button 
-          onClick={clear} 
-          style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '0.75rem' }}
-        >
+        <button type="button" onClick={clear} className="network-quiet-button">
           Xoá log
         </button>
       </div>
 
-      <div 
-        ref={containerRef} 
-        style={{ height: '240px', overflowY: 'auto', background: '#090d16', padding: '12px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '0.75rem' }}
-      >
+      <div className="network-log-filters" role="group" aria-label="Lọc log theo loại sự kiện">
+        {filters.map(({ id, label }) => (
+          <button
+            type="button"
+            key={id}
+            className={`network-filter-button ${logFilter === id ? 'is-active' : ''}`}
+            aria-pressed={logFilter === id}
+            onClick={() => setLogFilter(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div ref={containerRef} className="network-live-log" aria-live="polite">
         {lines.length === 0 && (
-          <div style={{ color: '#64748b' }}>Chưa có log nào — thử bấm "Bắt đầu đào" ở 1 Node bất kỳ.</div>
+          <div className="network-empty">Chưa có log nào — thử bấm "Bắt đầu đào" ở 1 Node bất kỳ.</div>
         )}
-        {lines.map((entry, i) => (
-          <div key={`${entry.nodeAddress}-${entry.at}-${i}`} style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
-            <span style={{ color: '#475569', shrink: 0 }}>{new Date(entry.at).toLocaleTimeString()}</span>
-            <span className={toneClass(entry.line)}>{entry.line}</span>
+        {lines.length > 0 && visibleLines.length === 0 && (
+          <div className="network-empty">Không có log thuộc bộ lọc này.</div>
+        )}
+        {visibleLines.map((entry, i) => (
+          <div key={`${entry.nodeAddress}-${entry.at}-${i}`} className="network-live-log-line">
+            <span className="network-log-time">{new Date(entry.at).toLocaleTimeString()}</span>
+            <span className={`network-log-event network-log-${classifyLog(entry.line)}`}>{entry.line}</span>
           </div>
         ))}
       </div>
@@ -101,19 +123,19 @@ export default function LiveLogViewer({ nodes }) {
   );
 }
 
-function toneClass(line) {
+function classifyLog(line = '') {
   const lower = line.toLowerCase();
-  if (lower.includes('mined') || lower.includes('đã nối thêm block') || lower.includes('đồng bộ')) {
-    return 'text-emerald-400';
-  }
   if (lower.includes('không hợp lệ') || lower.includes('reject') || lower.includes('lỗi') || lower.includes('thất bại')) {
-    return 'text-red-400';
+    return 'reject';
+  }
+  if (lower.includes('đồng bộ') || lower.includes('sync') || lower.includes('consensus') || lower.includes('đồng thuận')) {
+    return 'sync';
   }
   if (lower.includes('tx') || lower.includes('mempool') || lower.includes('giao dịch')) {
-    return 'text-amber-400';
+    return 'tx';
   }
-  if (lower.includes('peer') || lower.includes('kết nối')) {
-    return 'text-indigo-300';
+  if (lower.includes('block') || lower.includes('mined') || lower.includes('khối')) {
+    return 'block';
   }
-  return 'text-slate-300';
+  return 'other';
 }
