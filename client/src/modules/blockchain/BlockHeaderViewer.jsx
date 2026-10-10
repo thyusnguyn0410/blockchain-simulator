@@ -117,12 +117,19 @@ export default function BlockHeaderViewer() {
   const copyTimerRef = useRef(null);
 
   useEffect(() => {
+    const list = listRef.current;
     const selectedCard = blockRefs.current[selectedIndex];
-    if (!selectedCard || typeof selectedCard.scrollIntoView !== 'function') return;
+    if (!list || !selectedCard) return;
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    selectedCard.scrollIntoView({
-      inline: 'center',
-      block: 'nearest',
+    const listBounds = list.getBoundingClientRect();
+    const cardBounds = selectedCard.getBoundingClientRect();
+    const left = list.scrollLeft
+      + cardBounds.left
+      - listBounds.left
+      - (list.clientWidth - cardBounds.width) / 2;
+
+    list.scrollTo({
+      left: Math.max(0, left),
       behavior: reducedMotion ? 'auto' : 'smooth',
     });
   }, [selectedIndex]);
