@@ -249,7 +249,17 @@ app.get('/blocks', (req, res) => {
 
 /** GET /logs - Lịch sử log */
 app.get('/logs', (req, res) => {
-  res.json(logs.slice(-50));
+  const since = Number(req.query.since);
+  const entries = logs.slice(-50).filter((entry) => {
+    if (!Number.isFinite(since) || since <= 0) return true;
+    const timestamp = Date.parse(entry.time || entry.at || entry.timestamp);
+    return !Number.isFinite(timestamp) || timestamp > since;
+  });
+  res.json(entries.map((entry) => ({
+    ...entry,
+    nodeId: entry.nodeId || NODE_ID,
+    httpPort: entry.httpPort || HTTP_PORT,
+  })));
 });
 
 app.get('/mempool', (req, res) => res.json(blockchain.mempool));
