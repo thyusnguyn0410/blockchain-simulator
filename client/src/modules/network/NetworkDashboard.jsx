@@ -7,11 +7,15 @@ import LiveLogViewer from './LiveLogViewer.jsx';
 const STORAGE_KEY = 'blockchain-sim:registered-nodes';
 const DEFAULT_NODES = ['localhost:3001', 'localhost:3002', 'localhost:3003'];
 
-//WS (6001, 6002, 6003)
 function guessWsAddress(httpAddress) {
-  const [host, port] = httpAddress.split(':');
-  const p2pPort = Number(port) + 3000;
-  return `ws://${host}:${p2pPort}`;
+  const address = /^https?:\/\//i.test(httpAddress) ? httpAddress : `http://${httpAddress}`;
+  const url = new URL(address);
+  return `${url.protocol === 'https:' ? 'wss:' : 'ws:'}//${url.host}`;
+}
+
+function getNodeHttpUrl(address) {
+  const normalizedAddress = /^https?:\/\//i.test(address) ? address : `http://${address}`;
+  return normalizedAddress.replace(/\/+$/, '');
 }
 
 export default function NetworkDashboard() {
@@ -50,10 +54,10 @@ export default function NetworkDashboard() {
   const handleConnectPeers = async () => {
     if (!connectFrom || !connectToPeer) return;
     try {
-      const res = await fetch(`http://${connectFrom}/peers`, {
+      const res = await fetch(`${getNodeHttpUrl(connectFrom)}/peers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ peer: connectToPeer }),
+        body: JSON.stringify({ url: connectToPeer.trim() }),
       });
       const json = await res.json();
       setConnectMsg(res.ok ? `Đã yêu cầu ${connectFrom} kết nối tới ${connectToPeer}` : json.error || 'Lỗi');

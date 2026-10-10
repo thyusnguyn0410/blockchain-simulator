@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "node1": "node server.js --http=3001 --ws=6001 --name=Node-1",
-    "node2": "node server.js --http=3002 --ws=6002 --name=Node-2 --peers=ws://localhost:6001",
-    "node3": "node server.js --http=3003 --ws=6003 --name=Node-3 --peers=ws://localhost:6001"
+    "node2": "node server.js --http=3002 --ws=6002 --name=Node-2 --peers=ws://localhost:3001",
+    "node3": "node server.js --http=3003 --ws=6003 --name=Node-3 --peers=ws://localhost:3001"
   },
   "dependencies": {
     "cors": "^2.8.5",

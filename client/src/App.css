@@ -2341,6 +2341,13 @@ section.tool-section.merkle-tab-section .section-heading p {
 .network-packet-log, .network-live-log { height: 220px; overflow: auto; padding: var(--space-3); border: 1px solid var(--theme-border); border-radius: var(--radius-md); background: var(--theme-surface-solid); font-family: var(--font-mono); font-size: var(--font-size-xs); }
 .network-packet-line, .network-live-log-line { display: flex; gap: var(--space-2); margin-bottom: var(--space-1); line-height: var(--line-height-body); overflow-wrap: anywhere; }
 .network-packet-line > span:first-child, .network-log-time { flex: 0 0 auto; color: var(--theme-text-subtle); }
+.network-log-source { flex: 0 0 auto; color: var(--theme-text-muted); }
+.network-log-tag { flex: 0 0 auto; align-self: flex-start; padding: 0 var(--space-1); border: 1px solid currentColor; border-radius: var(--radius-sm); font-size: 0.65rem; font-weight: 700; line-height: 1.5; }
+.network-log-tag.network-log-tx { color: var(--accent-orange); }
+.network-log-tag.network-log-block { color: var(--accent-green); }
+.network-log-tag.network-log-sync { color: var(--accent-purple); }
+.network-log-tag.network-log-reject { color: var(--accent-red); }
+.network-log-tag.network-log-other { color: var(--theme-text-muted); }
 .network-event-tx, .network-log-tx { color: var(--accent-orange); }
 .network-event-sync, .network-log-sync { color: var(--accent-purple); }
 .network-event-other, .network-log-other { color: var(--theme-text); }

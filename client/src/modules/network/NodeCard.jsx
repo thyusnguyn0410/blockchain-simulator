@@ -16,6 +16,9 @@ export default function NodeCard({ address, onRemove }) {
   const [mineError, setMineError] = useState(null);
 
   const online = !error && data !== null;
+  const chainValid = data?.isChainValid ?? data?.chainValid ?? data?.isValid;
+  const chainStatus = chainValid === true ? 'VALID' : chainValid === false ? 'INVALID' : 'UNKNOWN';
+  const mempoolCount = data?.mempoolSize ?? data?.mempoolCount;
 
   const handleMine = async () => {
     setMining(true);
@@ -23,13 +26,22 @@ export default function NodeCard({ address, onRemove }) {
     const start = performance.now();
 
     try {
-      const res = await fetch(`${nodeBaseUrl}/mineBlock`, {
+      const res = await fetch(`${nodeBaseUrl}/mine`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Mine block thất bại');
+      const responseText = await res.text();
+      let json;
+      try {
+        json = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        throw new Error(`Máy chủ trả về dữ liệu không hợp lệ (HTTP ${res.status}). Kiểm tra địa chỉ node và endpoint /mine.`);
+      }
+      if (!res.ok) throw new Error(json.error || `Mine block thất bại (HTTP ${res.status}).`);
+      if (!json || typeof json !== 'object' || !Number.isInteger(json.index) || typeof json.hash !== 'string') {
+        throw new Error('Máy chủ không trả về thông tin block hợp lệ.');
+      }
 
       setLastMined({ ...json, elapsedMs: Math.round(performance.now() - start) });
     } catch (err) {
@@ -67,10 +79,10 @@ export default function NodeCard({ address, onRemove }) {
             <Stat label="Height" value={data.height} />
             <Stat
               label="Chain"
-              value={data.isChainValid ? 'VALID' : 'INVALID'}
-              valueClass={data.isChainValid ? 'network-value-online' : 'network-value-error'}
+              value={chainStatus}
+              valueClass={chainValid === true ? 'network-value-online' : chainValid === false ? 'network-value-error' : ''}
             />
-            <Stat label="Mempool" value={data.mempoolSize} />
+            <Stat label="Mempool" value={mempoolCount} />
             <Stat label="Peers" value={data.peers} className="network-stat-wide" />
           </div>
 
