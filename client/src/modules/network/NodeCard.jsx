@@ -3,12 +3,10 @@ import { useState } from 'react';
 import Card from '../../components/Card.jsx';
 import Button from '../../components/Button.jsx';
 import { usePolling } from '../../hooks/usePolling.js';
+import { normalizeNodeBaseUrl } from './nodeUrl.js';
 
 export default function NodeCard({ address, onRemove }) {
-  const nodeBaseUrl = `${/^https?:\/\//i.test(address) ? '' : 'http://'}${address
-    .replace(/^https?:\/\//i, '')
-    .replace(/\/status\/?$/i, '')
-    .replace(/\/+$/, '')}`;
+  const nodeBaseUrl = normalizeNodeBaseUrl(address);
   const { data, error } = usePolling(nodeBaseUrl, { interval: 2000 });
 
   const [mining, setMining] = useState(false);
