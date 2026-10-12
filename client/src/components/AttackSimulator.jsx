@@ -59,23 +59,31 @@ export default function AttackSimulator() {
     Object.fromEntries(scenarios.map(({ id }) => [id, true]))
   ));
 
-  const runScenario = (scenario) => {
-    try {
-      scenario.run();
-      setResults((current) => ({
-        ...current,
-        [scenario.id]: { ok: true, message: scenario.result },
-      }));
-    } catch (error) {
-      setResults((current) => ({
-        ...current,
-        [scenario.id]: {
-          ok: false,
-          message: `Không thể chạy mô phỏng: ${error.message}`,
-        },
-      }));
-    }
-  };
+ const runScenario = (scenario) => {
+  try {
+    const runResult = scenario.run();
+    const message = (runResult && typeof runResult === 'object' && runResult.message)
+      ? runResult.message
+      : scenario.result;
+    
+    setResults((current) => ({
+      ...current,
+      [scenario.id]: { 
+        ok: true, 
+        message, 
+        data: runResult  // ← Lưu cả object dữ liệu
+      },
+    }));
+  } catch (error) {
+    setResults((current) => ({
+      ...current,
+      [scenario.id]: {
+        ok: false,
+        message: `Không thể chạy mô phỏng: ${error.message}`,
+      },
+    }));
+  }
+};
 
   return (
     <div className="attack-grid">
@@ -112,14 +120,79 @@ export default function AttackSimulator() {
             >
               Chạy kịch bản
             </button>
-            {result && (
-              <p
-                className={`attack-result ${result.ok ? "success" : "error"}`}
-                role={result.ok ? "status" : "alert"}
-              >
-                <span aria-hidden="true">{result.ok ? "✓" : "!"}</span> {result.message}
-              </p>
-            )}
+           {result && (
+  <div
+    className={`attack-result ${result.ok ? "success" : "error"}`}
+    role={result.ok ? "status" : "alert"}
+  >
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+      <span aria-hidden="true">{result.ok ? "✓" : "!"}</span>
+      <strong>
+        {scenario.id === "fork" ? "Kết quả Fork" : result.message}
+      </strong>
+    </div>
+
+    {/* Hiển thị bảng cho kịch bản Fork */}
+    {scenario.id === "fork" && result.data && (
+      <table style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+        fontSize: '13px',
+        marginTop: '4px',
+      }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.2)' }}>
+            <th style={{ textAlign: 'left', padding: '6px 8px', color: '#94a3b8' }}>Chain</th>
+            <th style={{ textAlign: 'center', padding: '6px 8px', color: '#94a3b8' }}>Số block</th>
+            <th style={{ textAlign: 'center', padding: '6px 8px', color: '#94a3b8' }}>Kết quả</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ padding: '6px 8px' }}>Chain gốc</td>
+            <td style={{ textAlign: 'center', padding: '6px 8px' }}>{result.data.originalLength}</td>
+            <td style={{ textAlign: 'center', padding: '6px 8px', color: '#94a3b8' }}>—</td>
+          </tr>
+          <tr style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <td style={{ padding: '6px 8px' }}>
+              Chain A {result.data.winner === "Chain A" && "🏆"}
+            </td>
+            <td style={{ textAlign: 'center', padding: '6px 8px' }}>{result.data.chainALength}</td>
+            <td style={{
+              textAlign: 'center',
+              padding: '6px 8px',
+              color: result.data.winner === "Chain A" ? '#22c55e' : '#ef4444',
+              fontWeight: 'bold',
+            }}>
+              {result.data.winner === "Chain A" ? "Thắng" : "Bị loại"}
+            </td>
+          </tr>
+          <tr style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+            <td style={{ padding: '6px 8px' }}>
+              Chain B {result.data.winner === "Chain B" && "🏆"}
+            </td>
+            <td style={{ textAlign: 'center', padding: '6px 8px' }}>{result.data.chainBLength}</td>
+            <td style={{
+              textAlign: 'center',
+              padding: '6px 8px',
+              color: result.data.winner === "Chain B" ? '#22c55e' : '#ef4444',
+              fontWeight: 'bold',
+            }}>
+              {result.data.winner === "Chain B" ? "Thắng" : "Bị loại"}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    )}
+
+    {/* Hiển thị message cho các kịch bản khác */}
+    {scenario.id !== "fork" && (
+      <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
+        {result.message}
+      </p>
+    )}
+  </div>
+)}
           </article>
         );
       })}
