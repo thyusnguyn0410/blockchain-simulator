@@ -94,7 +94,6 @@ export function simulateFork() {
   const originalChain = new Blockchain({ difficulty: 0 });
   originalChain.addBlock([{ from: "A", to: "B", amount: 10 }]);
   originalChain.addBlock([{ from: "B", to: "C", amount: 5 }]);
-  console.log("Chain gốc có", originalChain.length, "blocks");
   
   const chainA = originalChain.clone();
   const chainB = originalChain.clone();
@@ -104,13 +103,25 @@ export function simulateFork() {
   chainB.addBlock([{ from: "C", to: "E", amount: 3 }]);
   chainB.addBlock([{ from: "E", to: "F", amount: 2 }]);
   
-  console.log("Chain A có", chainA.length, "blocks");
-  console.log("Chain B có", chainB.length, "blocks");
+  const chainALength = chainA.length;
+  const chainBLength = chainB.length;
+  const winner = chainALength >= chainBLength ? "Chain A" : "Chain B";
+  const loser = chainALength >= chainBLength ? "Chain B" : "Chain A";
+  const winnerLength = chainALength >= chainBLength ? chainALength : chainBLength;
+  const loserLength = chainALength >= chainBLength ? chainBLength : chainALength;
   
-  const winningChainName = chainA.length >= chainB.length ? "Chain A" : "Chain B";
-  const losingChainName = chainA.length >= chainB.length ? "Chain B" : "Chain A";
+  console.log("Chain gốc có", originalChain.length, "blocks");
+  console.log("Chain A có", chainALength, "blocks");
+  console.log("Chain B có", chainBLength, "blocks");
   
-  console.log("Chain thắng (dài hơn):", winningChainName);
-  console.log("Chain thua (ngắn hơn):", losingChainName);
-  console.log("Hệ thống chấp nhận chain thắng và loại bỏ chain thua (Chain Reorganization).");
+  return {
+    chainALength,
+    chainBLength,
+    winner,
+    loser,
+    winnerLength,
+    loserLength,
+    originalLength: originalChain.length,
+    message: `Chain gốc: ${originalChain.length} blocks | Chain A: ${chainALength} blocks | Chain B: ${chainBLength} blocks | ${winner} thắng (${winnerLength} blocks)`,
+  };
 }
